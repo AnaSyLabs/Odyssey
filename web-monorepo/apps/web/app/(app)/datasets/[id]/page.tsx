@@ -1,12 +1,8 @@
-import { notFound } from "next/navigation";
-import HexConsensus from "@/components/HexConsensus";
-import { DATASETS } from "@/lib/data";
+"use client";
+import { useParams } from "next/navigation";
+import SampleHexMap from "@/components/SampleHexMap";
 
-export const generateStaticParams = () => DATASETS.map(({ id }) => ({ id }));
-
-export default async function DatasetMap({ params }: PageProps<"/datasets/[id]">) {
-  const { id } = await params;
-  const dataset = DATASETS.find((d) => d.id === id);
-  if (!dataset) notFound();
-  return <HexConsensus dataset={dataset} />;
+export default function DatasetMap() {
+  const { id } = useParams<{ id: string }>();
+  return <SampleHexMap key={id} datasetKey={id} />;
 }
