@@ -3,6 +3,7 @@ import { LuCircleCheck, LuCircleX, LuDownload, LuLock, LuSearch } from "react-ic
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { Bone, Loading, PageSkeleton, RowsSkeleton } from "@/components/Skeleton";
 import { useWallet } from "@/components/wallet";
 import { short } from "@/lib/data";
 
@@ -35,7 +36,7 @@ async function fetchSamples(dataset: string, f: Form) {
 }
 
 export default function ExplorePage() {
-  return <Suspense fallback={<p className="text-sm text-[var(--st-on-var)]">Loading…</p>}><Explore /></Suspense>;
+  return <Suspense fallback={<Loading><PageSkeleton /></Loading>}><Explore /></Suspense>;
 }
 
 function Explore() {
@@ -102,20 +103,21 @@ function Explore() {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_440px]">
         <section className="glass overflow-hidden" aria-label="Results" aria-busy={loading}>
           <div className="flex items-center gap-3 border-b border-[var(--st-line)] px-4 py-2 text-xs text-[var(--st-on-var)]">
-            {meta ? <span>{meta.total} samples{meta.truncated && ` (first ${meta.scanned} scanned)`}</span> : <span>Searching Arkiv…</span>}
+            {meta && !loading ? <span>{meta.total} samples{meta.truncated && ` (first ${meta.scanned} scanned)`}</span> : <Bone className="h-3 w-24" />}
             {!session && <span className="ml-auto">Sign in to decrypt what you have access to.</span>}
           </div>
           {error && <p className="p-4 text-sm text-[var(--st-crimson)]" role="alert">{error}</p>}
-          {rows?.length === 0 && !error && <p className="p-4 text-sm text-[var(--st-on-var)]">No samples here. Try a larger radius or another area.</p>}
+          {(!rows || loading) && !error && <Loading label="Searching Arkiv" className="p-4"><RowsSkeleton rows={6} /></Loading>}
+          {rows?.length === 0 && !loading && !error && <p className="p-4 text-sm text-[var(--st-on-var)]">No samples here. Try a larger radius or another area.</p>}
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              {!!rows?.length && (
+              {!!rows?.length && !loading && (
                 <thead className="eyebrow">
                   <tr>{["Captured", "Kind", "Distance", "Device", "Storage", "Size", ""].map((h) => <th key={h} className="px-4 py-2 font-semibold">{h}</th>)}</tr>
                 </thead>
               )}
               <tbody>
-                {rows?.map((r) => (
+                {!loading && rows?.map((r) => (
                   <tr key={r.key} onClick={() => pick(r.key)} aria-selected={selected === r.key}
                     className={`cursor-pointer border-t border-[var(--st-line)] ${selected === r.key ? "bg-[var(--st-3)]" : "hover:bg-[var(--st-2)]"}`}>
                     <td className="px-4 py-2 mono">
@@ -171,7 +173,13 @@ function SampleDetail({ id }: { id: string }) {
   }, [id]);
 
   if (error) return <p className="text-sm text-[var(--st-crimson)]" role="alert">{error}</p>;
-  if (!s) return <p className="text-sm text-[var(--st-on-var)]">Loading sample from Arkiv…</p>;
+  if (!s) {
+    return (
+      <Loading label="Loading sample from Arkiv" className="space-y-4">
+        <Bone className="h-4 w-1/3" /><Bone className="h-24 w-full" /><RowsSkeleton rows={3} className="h-4" /><RowsSkeleton rows={8} className="h-4" />
+      </Loading>
+    );
+  }
   const src = `/api/samples/${id}/data`;
 
   return (

@@ -3,6 +3,7 @@ import { LuArrowUpRight, LuBadgeCheck, LuHexagon, LuLock, LuLockOpen, LuPlus, Lu
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Hex } from "viem";
+import { CardsSkeleton, Loading, RowsSkeleton } from "@/components/Skeleton";
 import { errorText, useWallet } from "@/components/wallet";
 import { ogTxUrl } from "@/lib/chains";
 import { short } from "@/lib/data";
@@ -77,7 +78,7 @@ export default function Datasets() {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_420px]">
         <section className="grid content-start gap-3 md:grid-cols-2" aria-label="Datasets" aria-busy={!list && !loadError}>
           {loadError && <p className="text-sm text-[var(--st-crimson)]" role="alert">{loadError}</p>}
-          {!list && !loadError && <p className="text-sm text-[var(--st-on-var)]">Loading datasets from Arkiv…</p>}
+          {!list && !loadError && <Loading label="Loading datasets from Arkiv" className="contents"><CardsSkeleton count={4} /></Loading>}
           {list && shown.length === 0 && (
             <p className="text-sm text-[var(--st-on-var)]">{list.length ? "No dataset matches." : session?.admin ? "No datasets yet. Create the first one." : "No datasets for sale yet."}</p>
           )}
@@ -183,7 +184,7 @@ function Detail({ d, reload }: { d: Dataset; reload: () => Promise<void> }) {
           <p className="eyebrow">Latest samples</p>
           <Link href={`/explore?dataset=${d.key}`} className="text-xs text-[var(--st-cyan)] hover:underline">Open in Explore →</Link>
         </div>
-        {!preview && <p className="text-xs text-[var(--st-on-var)]">Loading…</p>}
+        {!preview && <Loading label="Loading samples"><RowsSkeleton rows={3} /></Loading>}
         {preview?.length === 0 && <p className="text-xs text-[var(--st-on-var)]">No samples match yet.</p>}
         {preview?.map((s) => (
           <Link key={s.key} href={`/explore?dataset=${d.key}&sample=${s.key}`} className="sub flex items-center gap-2 px-3 py-2 text-xs hover:bg-[var(--st-3)]">

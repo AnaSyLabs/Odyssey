@@ -6,6 +6,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LuArrowLeft, LuEyeOff, LuLock, LuLockOpen, LuX } from "react-icons/lu";
+import { Bone, Loading, RowsSkeleton } from "@/components/Skeleton";
 import { useWallet } from "@/components/wallet";
 import { short } from "@/lib/data";
 import { useDark } from "@/lib/theme";
@@ -129,14 +130,28 @@ export default function SampleHexMap({ datasetKey }: { datasetKey: string }) {
       <Link href="/datasets" className="icon-btn" aria-label="Back to datasets"><LuArrowLeft size={18} /></Link>
       <div>
         <p className="eyebrow">Dataset · H3 coverage map</p>
-        <h1 className="text-2xl font-semibold tracking-tight">{dataset?.name ?? (dataset === null ? "Dataset not found" : "Loading…")}</h1>
+        {dataset === undefined ? <Bone className="mt-1 h-7 w-64" /> : <h1 className="text-2xl font-semibold tracking-tight">{dataset?.name ?? "Dataset not found"}</h1>}
       </div>
       {canView && <Link href={`/explore?dataset=${datasetKey}`} className="btn ml-auto">Open in Explore</Link>}
     </header>
   );
 
   if (error) return <main className="flex flex-col gap-4">{header}<p className="text-sm text-[var(--st-crimson)]" role="alert">{error}</p></main>;
-  if (!dataset || !samples) return <main className="flex flex-col gap-4">{header}</main>;
+  if (dataset === null) return <main className="flex flex-col gap-4">{header}</main>;
+  if (!dataset || !samples) {
+    return (
+      <main className="flex flex-col gap-4">
+        {header}
+        <Loading label="Loading the dataset map" className="flex flex-col gap-4">
+          <Bone className="h-14 w-full rounded-full" />
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+            <Bone className="h-[70vh] min-h-[480px] w-full rounded-3xl" />
+            <div className="glass space-y-3 p-6"><Bone className="h-5 w-1/2" /><RowsSkeleton rows={5} className="h-4" /></div>
+          </div>
+        </Loading>
+      </main>
+    );
+  }
   if (!canView) {
     return (
       <main className="flex flex-col gap-4">

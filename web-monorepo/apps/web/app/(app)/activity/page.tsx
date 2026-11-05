@@ -2,6 +2,7 @@
 import { LuExternalLink } from "react-icons/lu";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Loading, RowsSkeleton } from "@/components/Skeleton";
 import { errorText, useWallet } from "@/components/wallet";
 import { arkivTxUrl, ogTxUrl } from "@/lib/chains";
 import { short } from "@/lib/data";
@@ -22,22 +23,10 @@ function TxLink({ href, hash }: { href: string; hash: string }) {
   );
 }
 
+// SignInGate in the app shell guarantees a session here.
 export default function Activity() {
-  const { session, ready, signIn } = useWallet();
-  const [error, setError] = useState<string>();
-
-  if (!ready) return null;
-  if (!session) {
-    return (
-      <main className="glass mx-auto mt-10 max-w-md space-y-3 p-6 text-center">
-        <h1 className="text-xl font-semibold">Transactions</h1>
-        <p className="text-sm text-[var(--st-on-var)]">Sign in with your wallet to see your payments and their Arkiv records. Admins see every write the gateway makes.</p>
-        <button className="btn primary" onClick={() => signIn().catch((e) => setError(errorText(e)))}>Sign in with wallet</button>
-        {error && <p className="text-xs text-[var(--st-crimson)]" role="alert">{error}</p>}
-      </main>
-    );
-  }
-  return <Ledger key={session.address} admin={session.admin} />;
+  const { session } = useWallet();
+  return session && <Ledger key={session.address} admin={session.admin} />;
 }
 
 function Ledger({ admin }: { admin: boolean }) {
@@ -69,7 +58,7 @@ function Ledger({ admin }: { admin: boolean }) {
 
       <section className="glass overflow-hidden" aria-label="Payments">
         <p className="eyebrow border-b border-[var(--st-line)] px-4 py-3">Subscription payments · 0G Galileo</p>
-        {!payments && !error && <p className="p-4 text-sm text-[var(--st-on-var)]">Loading…</p>}
+        {!payments && !error && <Loading label="Loading payments" className="p-4"><RowsSkeleton rows={2} /></Loading>}
         {payments?.length === 0 && <p className="p-4 text-sm text-[var(--st-on-var)]">No payments yet. <Link href="/datasets" className="text-[var(--st-cyan)] hover:underline">Browse datasets</Link></p>}
         {!!payments?.length && (
           <div className="overflow-x-auto">
@@ -93,7 +82,7 @@ function Ledger({ admin }: { admin: boolean }) {
 
       <section className="glass overflow-hidden" aria-label="Arkiv transactions">
         <p className="eyebrow border-b border-[var(--st-line)] px-4 py-3">Arkiv writes · Rabdi testnet{latest && ` · latest block ${latest}`}</p>
-        {!events && !error && <p className="p-4 text-sm text-[var(--st-on-var)]">Reading Arkiv logs…</p>}
+        {!events && !error && <Loading label="Reading Arkiv logs" className="p-4"><RowsSkeleton rows={5} /></Loading>}
         {events?.length === 0 && <p className="p-4 text-sm text-[var(--st-on-var)]">No writes in the last ~7 days.</p>}
         {!!events?.length && (
           <div className="overflow-x-auto">

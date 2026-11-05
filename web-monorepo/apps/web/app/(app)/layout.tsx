@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { Suspense } from "react";
 import { LuBookOpen, LuBox, LuChartNoAxesColumn, LuCircuitBoard, LuDatabase, LuGlasses, LuHexagon, LuMapPinned, LuMoon, LuPlugZap, LuReceipt, LuSun } from "react-icons/lu";
 import Logo from "@/components/Logo";
+import SignInGate from "@/components/SignInGate";
 import { WalletButton, WalletProvider } from "@/components/wallet";
 import { setDark, useDark } from "@/lib/theme";
 
@@ -20,6 +21,8 @@ const NAV = [
   ["/mockups/devices", "Mockup: my devices", LuGlasses],
   ["/mockups/enroll", "Mockup: enroll device", LuPlugZap],
 ] as const;
+// Pages backed by the gateway; everything else (landing, docs, device, wiring, /mockups) stays open.
+const LIVE = ["/datasets", "/explore", "/activity"];
 
 // The dataset map route has a request-time param, so the shell reads usePathname() inside Suspense (Cache Components).
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -74,7 +77,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         </header>
-        <div className="flex-1 p-4">{children}</div>
+        <div className="flex-1 p-4">{LIVE.some((p) => path === p || path.startsWith(`${p}/`)) ? <SignInGate>{children}</SignInGate> : children}</div>
       </div>
     </div>
     </WalletProvider>
