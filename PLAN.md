@@ -1,4 +1,4 @@
-# Odsy plan
+# Odyssey plan
 
 Offline-first crypto transfers from smart glasses: say a send, confirm by voice, pass an iris check and a 0G Compute checkpoint, then the signed EIP-3009 authorization hops across a mesh until a device with internet relays it on Sepolia.
 
