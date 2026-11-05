@@ -6,6 +6,8 @@ export const metadata: Metadata = { title: "Protocol · Odyssey" };
 
 const TOC = [
   ["overview", "Overview"],
+  ["live", "What's live today"],
+  ["access", "Access and payments"],
   ["pipeline", "The pipeline"],
   ["sample", "What a sample proves"],
   ["validation", "Validation"],
@@ -55,8 +57,111 @@ export default function Docs() {
           />
         </Section>
 
+        <Section id="live" title="What's live today">
+          <P>
+            The first slice runs end to end on testnets: devices sign samples, a gateway verifies and encrypts them, and
+            every sample becomes an entity on <b>Arkiv</b> (Rabdi testnet). Labs sign in with a wallet, pay in test 0G on
+            <b> 0G Galileo</b>, and get per-sample keys to decrypt what their subscription covers.
+          </P>
+          <Figure n={1} title="Live today: device to lab" w={1000} h={300}
+            caption="Metadata is public on Arkiv so anyone can search it and check signatures. Payloads and sensor readings are ciphertext; only admins and subscribers get the keys.">
+            <Group x={10} y={20} w={220} h={260} label="DEVICE" />
+            <Node x={25} y={60} w={190} h={80} title="Capture" tech="text · sensor · image" lines={["lat/lon · time"]} />
+            <Node x={25} y={170} w={190} h={80} title="Sign" tech="device key" lines={["EIP-191 over hashes"]} tone="accent" />
+            <Edge pts={[[120, 140], [120, 170]]} />
+            <Group x={260} y={20} w={240} h={260} label="GATEWAY (Next.js API)" />
+            <Node x={275} y={60} w={210} h={80} title="Verify" tech="signature · registry" lines={["dedupe by content hash"]} />
+            <Node x={275} y={170} w={210} h={80} title="Encrypt" tech="AES-256-GCM" lines={["one key per sample"]} tone="accent" />
+            <Edge pts={[[215, 210], [245, 210], [245, 100], [275, 100]]} label="POST /api/ingest" at={[245, 155]} />
+            <Edge pts={[[380, 140], [380, 170]]} />
+            <Group x={530} y={20} w={200} h={260} label="ARKIV · 0G" />
+            <Node x={545} y={60} w={170} h={80} title="Arkiv" tech="readonly entity" lines={["metadata · geohash"]} tone="ext" />
+            <Node x={545} y={170} w={170} h={80} title="0G Storage" tech="payloads > 96 KiB" lines={["root kept on Arkiv"]} tone="ext" />
+            <Edge pts={[[485, 200], [545, 100]]} />
+            <Edge pts={[[485, 220], [545, 210]]} />
+            <Group x={760} y={20} w={230} h={260} label="LABS" />
+            <Node x={775} y={60} w={200} h={80} title="Subscribe" tech="SIWE · pay 0G" lines={["30-day dataset access"]} tone="accent" />
+            <Node x={775} y={170} w={200} h={80} title="Ingest" tech="keys from gateway" lines={["verify · decrypt locally"]} />
+            <Edge pts={[[875, 140], [875, 170]]} />
+            <Edge pts={[[715, 210], [775, 210]]} dashed label="read" />
+          </Figure>
+          <Table
+            head={["Pipeline step", "Vision", "Today"]}
+            rows={[
+              ["Capture and sign", "Secure element signs hash, time and witnesses", "Device key signs content hash, kind, mime, time, lat/lon and sensors hash. Location is pinned to Bandra until GPS lands."],
+              ["One human, one device", "World ID per device", "Registry on Arkiv binds a device key to a World ID nullifier, one device per human. The proof is checked by the registration page."],
+              ["Filter", "TEE gateway: blur, dedupe, quality", "Signature, registration and duplicate checks. No blurring or quality scoring yet."],
+              ["Store", "Encrypted batches on 0G", "Encrypted per sample: inline on Arkiv up to 96 KiB, 0G Storage above that."],
+              ["Anchor", "One Merkle root per batch on-chain", "Each sample is a readonly Arkiv entity. Batch roots on a long-lived chain are still to come."],
+              ["Verify", "Staked VRF committee", "Not built. The consensus map under /mockups shows the design."],
+              ["Pay", "Rewards root per epoch", "Labs pay 0G per dataset. Contributor payouts are not built."],
+            ]}
+          />
+          <H3>Each sample on Arkiv</H3>
+          <Code label="odsy.samples entity">{`
+{
+  "device":      "0x2466…8D8E",       // recovered from the device signature
+  "worldId":     "0x0235…200d",       // nullifier bound at registration
+  "deviceType":  "esp32-cam-glasses",
+  "mac":         "24:0A:C4:00:00:01",
+  "kind":        "sensor",           // image · video · audio · text · sensor
+  "capturedAt":  1793918858,
+  "lat": "19.0596", "lon": "72.8295",
+  "geohash":     "te7u3m8y4",         // precision 9, powers radius search
+  "contentHash": "0x28d9…9571",       // sha256 of the plaintext payload
+  "sensorsHash": "0x5c1e…a0f3",       // sha256 of the plaintext sensors JSON
+  "storage":     "inline",           // or "0g" with "ogRoot"
+  "enc":         "aes-256-gcm-v1",
+  "signature":   "0x9b0e…41c",
+  "data":        "<ciphertext>",     // inline payloads only
+  "sensors":     "<ciphertext>"
+}
+`}</Code>
+          <Note title="Searchable and checkable by anyone, readable by subscribers">
+            <P>
+              Anyone can re-check a sample&apos;s device signature, because it covers <Mono>contentHash</Mono> and{" "}
+              <Mono>sensorsHash</Mono>. Checking the payload itself needs its key. Arkiv keeps an entity for about six
+              months; a daily job extends what the retention policy keeps, and labs copy what they buy into their own
+              storage.
+            </P>
+          </Note>
+        </Section>
+
+        <Section id="access" title="Access and payments">
+          <Sequence n={2} title="A lab subscribes to a dataset"
+            actors={[
+              { id: "lab", label: "Lab wallet", tech: "MetaMask" },
+              { id: "app", label: "Gateway", tech: "Next.js API" },
+              { id: "og", label: "0G Galileo", tech: "payment" },
+              { id: "ark", label: "Arkiv", tech: "Rabdi" },
+            ]}
+            steps={[
+              { section: "1 · SIGN IN" },
+              { from: "lab", to: "app", label: "SIWE message + signature" },
+              { from: "app", to: "lab", label: "session cookie", reply: true },
+              { section: "2 · PAY" },
+              { from: "lab", to: "og", label: "price → treasury, data = dataset key" },
+              { from: "lab", to: "app", label: "tx hash" },
+              { from: "app", to: "og", label: "check receipt" },
+              { from: "app", to: "ark", label: "write subscription (paidUntil)" },
+              { section: "3 · READ" },
+              { from: "lab", to: "app", label: "per-sample keys" },
+              { from: "lab", to: "ark", label: "ciphertext + metadata" },
+              { self: "lab", label: "decrypt · verify hashes and signature" },
+            ]}
+          />
+          <Ul>
+            <li><b>Datasets</b> are saved filters (area, kind, device model, time range) with a price in 0G per 30 days. New captures that match are included automatically.</li>
+            <li><b>Payments</b> are checked by the gateway: from the signed-in wallet, to the treasury, at least the price, the dataset key in the transaction data, and never used before. Renewals stack.</li>
+            <li><b>Keys</b> are released per sample and only while a subscription covers it. Admins can read everything.</li>
+            <li><b>The app</b> asks for a wallet sign-in before Datasets, Explore, the dataset map and Transactions. Signing a message costs no gas; signing out also disconnects the site in the wallet.</li>
+            <li><b>Lab ingest</b> (<Mono>npm run lab:ingest</Mono>) pulls subscribed datasets into the lab&apos;s own storage, re-checking every sample, with an option to keep only the samples the retention policy keeps.</li>
+          </Ul>
+        </Section>
+
         <Section id="pipeline" title="The pipeline">
-          <Figure n={1} title="From lens to ledger" w={1000} h={300}
+          <P>The full design. The <a href="#live" className="text-[var(--st-cyan)] hover:underline">table above</a> shows which parts are live.</P>
+          <Figure n={3} title="From lens to ledger" w={1000} h={300}
             caption="Data never goes on-chain. Encrypted clips live in decentralized storage; the chain holds one Merkle root per batch, the stakes, the challenges and the reward roots.">
             <Group x={10} y={20} w={230} h={260} label="DEVICE" />
             <Node x={30} y={60} w={190} h={80} title="Capture" tech="mic · camera · IMU · gaze" lines={["10 s clip"]} />
@@ -113,7 +218,7 @@ export default function Docs() {
         </Section>
 
         <Section id="validation" title="Validation">
-          <Sequence n={2} title="One batch, from anchor to accepted"
+          <Sequence n={4} title="One batch, from anchor to accepted"
             actors={[
               { id: "gw", label: "Gateway", tech: "TEE" },
               { id: "chain", label: "Chain", tech: "contracts" },
@@ -184,7 +289,8 @@ reward = base × quality score × rarity
           <Ul>
             <li>The glasses show <b>REC</b> while capturing, so bystanders know.</li>
             <li>Gateways blur faces and number plates before anything is stored.</li>
-            <li>Each batch has its own encryption key; destroying it forgets the data (<Mono>crypto-shredding</Mono>), so immutable storage and erasure rights can coexist.</li>
+            <li>Each sample has its own encryption key, derived from one gateway secret. Destroying that secret forgets every sample at once (<Mono>crypto-shredding</Mono>); per-batch keys will make it selective.</li>
+            <li>Today, metadata (time, place, device, MAC, World ID nullifier) is public on Arkiv so it can be searched. Hashing the MAC and blurring faces at the gateway are next.</li>
             <li>Contributors stay anonymous: the network knows a device belongs to <i>a</i> verified human, not <i>which</i> one.</li>
           </Ul>
         </Section>
@@ -192,6 +298,7 @@ reward = base × quality score × rarity
         <Section id="roadmap" title="Roadmap">
           <H3>Phase 1 · Prove it</H3>
           <P>Device signing, uploads, batch roots on-chain, test-token rewards. The team does the spot-checks.</P>
+          <P><b>Done:</b> signed uploads, device registry, encrypted storage on Arkiv and 0G, geo search, paid dataset subscriptions and lab ingest. <b>Next:</b> batch roots on a long-lived chain, contributor rewards, real hardware with GPS.</P>
           <H3>Phase 2 · Stake it</H3>
           <P>Permissioned staked validators, honeypots, challenge window and slashing.</P>
           <H3>Phase 3 · Open it</H3>
