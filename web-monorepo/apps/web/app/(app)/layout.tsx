@@ -1,13 +1,14 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LuBookOpen, LuBox, LuCircuitBoard, LuDatabase, LuMoon, LuSun } from "react-icons/lu";
+import { LuBookOpen, LuBox, LuCircuitBoard, LuDatabase, LuMoon, LuPlugZap, LuSun } from "react-icons/lu";
 import Logo from "@/components/Logo";
 import { setDark, useDark } from "@/lib/theme";
 
 const NAV = [
   ["/datasets", "Datasets", LuDatabase],
   ["/device", "Capture device", LuBox],
+  ["/enroll", "Enroll device", LuPlugZap],
   ["/wiring", "Wiring & firmware", LuCircuitBoard],
   ["/docs", "Protocol docs", LuBookOpen],
 ] as const;
