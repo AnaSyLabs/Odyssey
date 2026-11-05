@@ -30,7 +30,7 @@ export type Dataset = {
   preview: Sample[];
 };
 
-const hex = (seed: number, len: number) => {
+export const hex = (seed: number, len: number) => {
   let x = Math.imul(seed + 1, 2654435761) >>> 0;
   let out = "";
   while (out.length < len) {
