@@ -6,16 +6,23 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --test lib/*.test.ts lib/*.test.mjs",
+    "simulate": "node --env-file=.env scripts/simulate-device.ts",
+    "lab:ingest": "node --env-file-if-exists=.env scripts/lab-ingest.ts"
   },
   "dependencies": {
+    "@0gfoundation/0g-storage-ts-sdk": "^1.2.13",
+    "@arkiv-network/sdk": "^1.0.1",
+    "ethers": "^6.13.1",
     "h3-js": "^4.5.0",
     "maplibre-gl": "^6.16.0",
     "next": "16.4.3",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-icons": "^5.7.0",
-    "three": "^0.186.1"
+    "three": "^0.186.1",
+    "viem": "^2.57.16"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",

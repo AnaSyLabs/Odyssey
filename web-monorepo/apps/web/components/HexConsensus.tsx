@@ -122,7 +122,7 @@ export default function HexConsensus({ dataset }: { dataset: Dataset }) {
 
   const header = (
     <header className="flex flex-wrap items-center gap-x-4 gap-y-2">
-      <Link href="/datasets" className="icon-btn" aria-label="Back to datasets"><LuArrowLeft size={18} /></Link>
+      <Link href="/mockups/datasets" className="icon-btn" aria-label="Back to datasets"><LuArrowLeft size={18} /></Link>
       <div>
         <p className="eyebrow">Data source · consensus map</p>
         <h1 className="text-2xl font-semibold tracking-tight">{dataset.name}</h1>
