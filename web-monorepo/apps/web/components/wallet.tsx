@@ -44,19 +44,26 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     fetch("/api/auth/me").then((r) => r.json()).then(setSession).catch(() => setSession(null)).finally(() => setReady(true));
   }, []);
 
-  const signOut = useCallback(async () => {
+  const endSession = useCallback(async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     setSession(null);
   }, []);
 
+  // Sign out also disconnects this site in the wallet, so the next sign-in asks again.
+  const signOut = useCallback(async () => {
+    await endSession();
+    // Wallets without EIP-2255 revoke (older MetaMask, some others) keep the site connected; the session is gone either way.
+    await window.ethereum?.request({ method: "wallet_revokePermissions", params: [{ eth_accounts: {} }] } as never).catch(() => {});
+  }, [endSession]);
+
   // Switching accounts in the wallet ends the session for the old one.
   useEffect(() => {
     const onChange = (accounts: string[]) => {
-      if (session && accounts[0]?.toLowerCase() !== session.address.toLowerCase()) void signOut();
+      if (session && accounts[0]?.toLowerCase() !== session.address.toLowerCase()) void endSession();
     };
     window.ethereum?.on?.("accountsChanged", onChange);
     return () => window.ethereum?.removeListener?.("accountsChanged", onChange);
-  }, [session, signOut]);
+  }, [session, endSession]);
 
   const signIn = useCallback(async () => {
     const w = wallet();
