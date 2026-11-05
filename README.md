@@ -82,6 +82,19 @@ Slashing only happens on **objective evidence** (bad signature, duplicate, faile
 | ENS device subnames (`glasses-xxxx.odsy.eth`) | Public device identity and reputation |
 | Next.js server + MongoDB on Vercel | Gateway and coordinator MVP |
 
+## Directory structure
+
+```
+.
+├── web-monorepo/  Web apps and services: Next.js gateway and coordinator, World ID, ENS, 0G, relayer, iris matcher
+├── firmware/      ESP32 glasses: mic, IR camera, IMU, OLED, device signing
+├── contracts/     Foundry: Odsy token, batch Merkle root anchor, rewards
+├── .claude/       Agent skills (Solidity security, OpenZeppelin, token checks)
+├── .cursor/       Cursor rules (Ponytail)
+├── AGENTS.md      Rules for AI coding agents
+└── CLAUDE.md      Loads AGENTS.md for Claude Code
+```
+
 ## Roadmap
 
 - [ ] **Phase 1: Prove it.** Device signing, upload to 0G, batch roots on-chain, test-token rewards. The team does the spot-checks.
