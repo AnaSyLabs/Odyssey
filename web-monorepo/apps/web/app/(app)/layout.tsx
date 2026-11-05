@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense } from "react";
-import { LuBookOpen, LuBox, LuChartNoAxesColumn, LuCircuitBoard, LuDatabase, LuGlasses, LuHexagon, LuMapPinned, LuMoon, LuPlugZap, LuReceipt, LuSun } from "react-icons/lu";
+import { LuBookOpen, LuBox, LuChartNoAxesColumn, LuCircuitBoard, LuDatabase, LuGlasses, LuHexagon, LuLayers, LuMapPinned, LuMoon, LuPlugZap, LuReceipt, LuSun } from "react-icons/lu";
 import Logo from "@/components/Logo";
 import SignInGate from "@/components/SignInGate";
 import { WalletButton, WalletProvider } from "@/components/wallet";
@@ -20,6 +20,7 @@ const NAV = [
   ["/mockups/analytics", "Mockup: analytics", LuChartNoAxesColumn],
   ["/mockups/devices", "Mockup: my devices", LuGlasses],
   ["/mockups/enroll", "Mockup: enroll device", LuPlugZap],
+  ["/mockups", "Mockups", LuLayers],
 ] as const;
 // Pages backed by the gateway; everything else (landing, docs, device, wiring, /mockups) stays open.
 const LIVE = ["/datasets", "/explore", "/activity"];
