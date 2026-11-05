@@ -5,6 +5,9 @@
   "scripts": {
     "dev": "npm run dev -w web",
     "build": "npm run build -w web",
-    "lint": "npm run lint -w web"
+    "lint": "npm run lint -w web",
+    "test": "npm test -w web",
+    "simulate": "npm run simulate -w web --",
+    "lab:ingest": "npm run lab:ingest -w web"
   }
 }
