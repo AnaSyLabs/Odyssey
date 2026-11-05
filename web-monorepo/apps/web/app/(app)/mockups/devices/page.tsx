@@ -33,7 +33,7 @@ export default function Devices() {
       <header className="flex flex-wrap items-end gap-x-6 gap-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">My devices</h1>
         <p className="muted text-sm">Glasses enrolled to your verified identity. Only active devices can upload.</p>
-        <Link href="/enroll" className="btn primary ml-auto"><LuPlus size={16} />Enroll device</Link>
+        <Link href="/mockups/enroll" className="btn primary ml-auto"><LuPlus size={16} />Enroll device</Link>
       </header>
 
       <div className="seg" role="group" aria-label="Filter by status">

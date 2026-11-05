@@ -36,6 +36,10 @@ yarn-error.log*
 # ENS setup state, holds demo wallet keys
 scripts/.ens-setup.json
 
+# lab ingest output (scripts/lab-ingest.ts)
+/lab-data
+/lab-*/
+
 # vercel
 .vercel
 
