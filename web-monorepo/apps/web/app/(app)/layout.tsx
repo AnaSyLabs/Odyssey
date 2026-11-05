@@ -34,7 +34,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <WalletProvider>
     <div className={`lab studio ${dark ? "" : "light"}`}>
-      <aside aria-label="App navigation" className="rail fixed inset-y-0 left-0 z-30 hidden w-16 flex-col items-center py-5 lg:flex">
+      <aside aria-label="App navigation" className="rail fixed inset-y-0 left-0 z-30 hidden w-16 flex-col items-center pb-5 pt-2 lg:flex">
         <Link href="/" aria-label="Odyssey home" className="grid size-10 place-items-center rounded-full bg-[var(--st-lime)] text-[#07090e]">
           <Logo size={18} />
         </Link>

@@ -17,6 +17,15 @@ export default function Wiring() {
         <p className="muted text-sm">ESP32 DevKit, breadboard and reference firmware, one lesson at a time.</p>
       </header>
 
+      <nav className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5" aria-label="Lessons">
+        {LESSONS.map((l, i) => (
+          <button key={l.id} aria-current={i === lesson ? "step" : undefined} className={`ui-card flex flex-col px-4 py-3 text-left ${i === lesson ? "active" : ""}`} onClick={() => setLesson(i)}>
+            <span className="eyebrow">Lesson {String(i + 1).padStart(2, "0")}</span>
+            <span className="mt-1 block text-sm font-medium">{l.title}</span>
+          </button>
+        ))}
+      </nav>
+
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_460px]">
         <section className="ui-card flex flex-col justify-center p-4" aria-label="Wiring diagram">
           <Scene lesson={lesson} hudState="idle" prompt="" focusPin={focusPin} />
@@ -54,16 +63,6 @@ export default function Wiring() {
           <CodePane lesson={lesson} />
         </aside>
       </div>
-
-      <nav className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5" aria-label="Lessons">
-        {LESSONS.map((l, i) => (
-          <button key={l.id} className={`ui-card flex flex-col p-5 text-left ${i === lesson ? "active" : ""}`} onClick={() => setLesson(i)}>
-            <span className="eyebrow">Lesson {String(i + 1).padStart(2, "0")}</span>
-            <span className="mt-2 block font-medium">{l.title}</span>
-            <span className="muted mt-1 block text-xs leading-snug">{l.blurb}</span>
-          </button>
-        ))}
-      </nav>
     </main>
   );
 }

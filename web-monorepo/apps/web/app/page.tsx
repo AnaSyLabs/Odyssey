@@ -13,10 +13,10 @@ const Glasses3D = dynamic(() => import("@/components/lab/Glasses3D"), {
 });
 
 const FIGURES = [
-  [`${STATS.hours.toLocaleString()} h`, "Verified first-person data"],
-  [STATS.devices.toLocaleString(), "Capture devices"],
-  [`${Math.round(STATS.verifiedShare * 100)} %`, "Samples pass validation"],
-  ["1 tx", "Per batch, any size"],
+  [STATS.hours.toLocaleString(), "h", "Verified first-person data"],
+  [STATS.devices.toLocaleString(), "", "Capture devices"],
+  [String(Math.round(STATS.verifiedShare * 100)), "%", "Samples pass validation"],
+  ["1", "tx", "Per batch, any size"],
 ];
 
 const PIPELINE = [
@@ -88,16 +88,16 @@ export default function Landing() {
           </div>
         </section>
 
-        <section className="grid grid-cols-2 gap-x-6 gap-y-8 py-16 text-center lg:grid-cols-4" aria-label="Key figures">
-          {FIGURES.map(([v, k]) => (
-            <div key={k}>
-              <p className="text-3xl font-semibold tracking-tight">{v}</p>
-              <p className="eyebrow mt-1">{k}</p>
+        <section className="glass mt-8 grid grid-cols-2 divide-[var(--st-line,rgba(128,128,128,.2))] py-2 text-center max-lg:[&>*:nth-child(n+3)]:border-t lg:grid-cols-4 lg:divide-x" aria-label="Key figures">
+          {FIGURES.map(([v, u, k]) => (
+            <div key={k} className="border-[var(--st-line,rgba(128,128,128,.2))] px-4 py-8">
+              <p className="text-4xl font-semibold tabular-nums tracking-tight">{v}<span className="ml-1 text-xl text-[var(--st-lime)]">{u}</span></p>
+              <p className="eyebrow mt-2">{k}</p>
             </div>
           ))}
         </section>
 
-        <section className="glass relative mb-16 overflow-hidden p-8" aria-labelledby="pipeline">
+        <section className="glass relative mb-16 mt-8 overflow-hidden p-8" aria-labelledby="pipeline">
           <div className="pointer-events-none absolute -right-24 -top-24 size-80 rounded-full bg-[var(--st-phosphor)] opacity-[0.07] blur-3xl" />
           <span className="pill status" style={{ "--tone": "var(--st-phosphor)" } as React.CSSProperties}><LuCloudUpload size={12} />From lens to ledger</span>
           <h2 id="pipeline" className="mt-4 text-3xl font-semibold tracking-tight">Every clip carries its own proof.</h2>
