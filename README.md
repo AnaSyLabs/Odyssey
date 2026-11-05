@@ -88,7 +88,8 @@ Slashing only happens on **objective evidence** (bad signature, duplicate, faile
 ```
 .
 ├── web-monorepo/  Web apps and services: Next.js gateway and coordinator, World ID, ENS, 0G, relayer, iris matcher
-│   └── apps/web/   Site + Arkiv gateway: app/(app) pages, app/api (ingest, devices, samples, datasets, subscriptions, keys, auth, cron),
+│   └── apps/web/   Site + Arkiv gateway: app/(app) pages (live + /mockups), app/api (ingest, devices, samples, datasets,
+│                   subscriptions, keys, auth, cron), components (wallet, sign-in gate, skeletons, H3 map),
 │                   lib (arkiv, geo, crypto, sessions, payments, 0G, sample protocol),
 │                   scripts/simulate-device.ts (fake glasses), scripts/lab-ingest.ts (lab-side verified sync)
 ├── firmware/      ESP32 glasses: mic, IR camera, IMU, OLED, device signing
@@ -146,14 +147,16 @@ Metadata stays public so the geo index, search and signature checks work for any
 
 ### The app: sign-in, datasets, payments, transactions
 
-Wallet sign-in uses [Sign-In with Ethereum](https://eips.ethereum.org/EIPS/eip-4361) with any browser wallet such as MetaMask. The server checks the signed message's domain, nonce, expiry and signature, then sets a signed `httpOnly` session cookie for 7 days. Wallets listed in `ADMIN_ADDRESSES` are admins.
+Wallet sign-in uses [Sign-In with Ethereum](https://eips.ethereum.org/EIPS/eip-4361) with any browser wallet such as MetaMask. The server checks the signed message's domain, nonce, expiry and signature, then sets a signed `httpOnly` session cookie for 7 days. Signing costs no gas. **Sign out** ends the session and also disconnects the site in the wallet (`wallet_revokePermissions`), so the next sign-in asks again. Wallets listed in `ADMIN_ADDRESSES` are admins.
 
-| Page | Anyone | Signed-in lab | Admin |
+The live pages (Datasets, the dataset map, Explore and Transactions) show a **sign-in overlay** until a wallet signs in, over a blurred placeholder page. Landing, Protocol docs, Capture device, Wiring and everything under `/mockups` stay open. While data loads from Arkiv, pages show **skeleton placeholders** in the shape of the content.
+
+| Page | Any signed-in wallet | Subscriber | Admin |
 |---|---|---|---|
-| **Datasets** | Browse, preview sample metadata | Subscribe or renew with test 0G, see access-until date, lab-ingest snippet | Create datasets, list or unlist them |
-| **Dataset map** (`/datasets/{key}`) | — | H3 hexagon map of the dataset's samples: volume, kind and access per cell, linking into Explore | Same, for every dataset |
-| **Explore samples** | Search by dataset or area, kind and time; see metadata and signature proof | Decrypt and view or download covered samples | Decrypt everything |
-| **Transactions** | — | Own 0G payments and the Arkiv records of their subscriptions | Every recent Arkiv write by the gateway and every payment |
+| **Datasets** (`/datasets`) | Browse datasets, preview sample metadata, subscribe with test 0G | Renew, see access-until date, lab-ingest snippet, open the map | Create datasets, list or unlist them |
+| **Dataset map** (`/datasets/{key}`) | Subscribe prompt | H3 hexagon map of the dataset's samples: volume, kind and access per cell, linking into Explore | Same, for every dataset |
+| **Explore samples** (`/explore`) | Search by dataset or area, kind and time; see metadata and the signature proof | Decrypt and view or download covered samples | Decrypt everything |
+| **Transactions** (`/activity`) | Own 0G payments | Plus the Arkiv records of their subscriptions | Every recent Arkiv write by the gateway and every payment |
 
 **Paying.** A dataset is a saved filter (area, kind, device type, time range) plus a price in 0G per 30 days. Subscribing works like this:
 
@@ -276,12 +279,15 @@ node -e "import('viem/accounts').then(a=>{const k=a.generatePrivateKey();console
 - **Location is hard-coded to Bandra, Mumbai**, because there is no GPS yet. Even with GPS, a signed location is only as honest as the device; witness co-signing (see *How it works*) is the planned check.
 - **World ID is not verified here.** `POST /api/devices` trusts the registration page via `REGISTRAR_TOKEN`.
 - **Privacy.** MAC addresses and World ID nullifiers are public on Arkiv. Images can show bystanders. Before real users: hash or drop the MAC and blur faces at the gateway. Immutable personal data also conflicts with GDPR and DPDP deletion rights. Per-sample keys make crypto-shredding possible, by destroying `DATA_KEY`, but only for all samples at once.
-- **Live-tested so far:** device registration, ingest, and geo query against Arkiv. Sign-in and the UI were tested locally with mocked data. Encrypted ingest, datasets, 0G payments, decryption, the activity log and the new lab ingest have not yet run against live Arkiv and 0G.
+- **Live-tested so far:** device registration, plaintext and encrypted ingest (text and sensor samples), geo queries, wallet sign-in, dataset creation and the lab ingest job's sign-in and dataset lookup, all against Arkiv Rabdi. Not yet confirmed end to end on live networks: a paid subscription unlocking decryption, lab ingest writing decrypted files, payloads over 96 KiB on 0G, the Transactions log and the retention job.
 - **Scale shortcuts** are marked `shortcut:` in code. The geo scan stops at 2,000 candidates. Duplicate and registration checks can race. The extend job runs in a single request.
 
 ## Roadmap
 
 - [ ] **Phase 1: Prove it.** Device signing, upload to 0G, batch roots on-chain, test-token rewards. The team does the spot-checks.
+  - [x] Signed device uploads, device registry with World ID binding, encrypted storage on Arkiv and 0G
+  - [x] Geo search, paid dataset subscriptions on 0G Galileo, lab ingest with local decryption
+  - [ ] Batch Merkle roots on a long-lived chain, contributor rewards, real glasses with GPS
 - [ ] **Phase 2: Stake it.** Permissioned staked validators, honeypots, challenge window, slashing.
 - [ ] **Phase 3: Open it.** Permissionless validators, TEE gateways, rarity rewards, buyer marketplace with licensing.
 - [ ] **Phase 4: Value it.** Reward data by how much it actually improves a model.
@@ -298,4 +304,4 @@ Wear it, capture your world, get paid. Your data is encrypted, your identity sta
 
 ---
 
-<sub>Status: **vision document**. The pivot is not built yet; the "Built today" table is the current Odsy codebase (see README.md). Numbers (1–5 % sampling, challenge windows) are starting assumptions to tune against measured fraud rates.</sub>
+<sub>Status: **testnet prototype**. The Arkiv data layer, encryption, dataset subscriptions and lab ingest are built (see *Arkiv data layer*); validation, staking and contributor rewards are still design. The app's Protocol page (`/docs`) shows what's live next to the full design. Numbers (1–5 % sampling, challenge windows) are starting assumptions to tune against measured fraud rates.</sub>
