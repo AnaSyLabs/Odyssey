@@ -69,7 +69,7 @@ node rec.mjs                    # all 8 takes into takes/; or e.g. node rec.mjs 
 ./cut.sh                        # trims loading screens, joins takes into silent-cut.mp4
 ```
 
-The narration that fits this cut is in [script.md](script.md).
+The narration that fits this cut is in [script.md](script.md). A full-length version (about 3:50, with the glasses and Claude clips) is in [script-4min.md](script-4min.md).
 
 ## Takes
 
