@@ -6,12 +6,15 @@ export default function Testimonials() {
     <>
       <div className="grid gap-3 md:grid-cols-3">
         {TESTIMONIALS.map((t) => (
-          <figure key={t.quote} className="glass flex flex-col p-6">
-            <blockquote className="flex-1 text-sm">&ldquo;{t.quote}&rdquo;</blockquote>
-            <figcaption className="mt-4 flex items-center gap-3">
-              <Image src={t.image} alt="" width={36} height={36} className="rounded-full" />
-              <span className="eyebrow">{t.name} · {t.role}</span>
-            </figcaption>
+          <figure key={t.hash} className="glass flex gap-4 p-6">
+            <Image src={t.image} alt={t.name} width={56} height={56} className="size-14 shrink-0 rounded-full" />
+            <div className="flex min-w-0 flex-1 flex-col">
+              <blockquote className="flex-1 text-sm">&ldquo;{t.quote}&rdquo;</blockquote>
+              <figcaption className="mt-4">
+                <span className="eyebrow block">{t.name} · {t.role}</span>
+                <code className="mt-1 block text-xs text-[var(--st-on-var)]" title={t.hash}>{t.hash.slice(0, 10)}…{t.hash.slice(-8)}</code>
+              </figcaption>
+            </div>
           </figure>
         ))}
       </div>

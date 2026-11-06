@@ -3,18 +3,21 @@
     "quote": "I wear them on my commute and get paid for clips I'd have recorded anyway. And I can see every one I've uploaded.",
     "name": "Contributor",
     "role": "Mumbai",
-    "image": "/testimonials/contributor.svg"
+    "image": "/testimonials/contributor.svg",
+    "hash": "0x774143438af6e2796dac13ecb652dd079c9bfccf5a0dc1e9156e05a77b88498f"
   },
   {
     "quote": "Each sample comes with a signature and an on-chain root. That's the first time a dataset vendor has given us a receipt.",
     "name": "AI lab",
     "role": "Robotics team",
-    "image": "/testimonials/lab.svg"
+    "image": "/testimonials/lab.svg",
+    "hash": "0xfe16a40462641ddf3d308a8a6673d4f57fad07bad6aaa50f92cb6d81f21d91f6"
   },
   {
     "quote": "I score a small random sample and only lose stake on hard evidence. The rules are clear enough to trust.",
     "name": "Validator",
     "role": "Galileo testnet",
-    "image": "/testimonials/validator.svg"
+    "image": "/testimonials/validator.svg",
+    "hash": "0x9dc83b2bb76004281ae7391755375a0135bd474a8ebd25632b2f8f85d8fac99a"
   }
 ]
