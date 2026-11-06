@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { LuArrowRight, LuCheck, LuCpu, LuFingerprint, LuLoader, LuShield, LuShieldCheck } from "react-icons/lu";
 import { IDKitRequestWidget, orbLegacy, type IDKitResult, type RpContext } from "@worldcoin/idkit";
 import { getAddress, isAddress } from "viem";
@@ -11,14 +12,28 @@ type WorldConfig = { app_id: `app_${string}`; action: string; environment: "stag
 type Receipt = { device: string; worldId: string; txHash: string };
 
 const MAC = /^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$/;
+const ORB_NEEDED = "Enrolling a device needs Orb verification. Verify at a World Orb (world.org/find-orb), then try again with the Human credential.";
+const ONE_DEVICE = "Your World ID has already enrolled a device. Each human can enroll one device.";
+const WORLD_ERRORS: Record<string, string> = {
+  user_rejected: "You declined the request in World App. Click Verify with World ID to try again.",
+  cancelled: "Verification was cancelled. Click Verify with World ID to try again.",
+  credential_unavailable: ORB_NEEDED,
+  max_verifications_reached: ONE_DEVICE,
+  nullifier_replayed: ONE_DEVICE,
+  connection_failed: "Couldn't reach World App. Check your connection and try again.",
+  timeout: "World App didn't answer in time. Try again.",
+};
 
 export default function EnrollPage() {
-  const [device, setDevice] = useState("");
-  const [mac, setMac] = useState("");
+  // A laptop node prints /enroll?device=..&mac=..&type=laptop; prefill from it.
+  const q = useSearchParams();
+  const [device, setDevice] = useState(q.get("device") ?? "");
+  const [mac, setMac] = useState(q.get("mac") ?? "");
   const [config, setConfig] = useState<WorldConfig | null>(null);
   const [busy, setBusy] = useState(false);
-  const [, setError] = useToastError();
+  const [error, setError] = useToastError();
   const [receipt, setReceipt] = useState<Receipt | null>(null);
+  const [deviceType, setDeviceType] = useState(q.get("type") === "laptop" ? "laptop" : "esp32-cam-glasses");
 
   const ready = isAddress(device.trim()) && MAC.test(mac.trim());
 
@@ -27,6 +42,9 @@ export default function EnrollPage() {
     setBusy(true);
     setError(null);
     try {
+      // Check before World ID: a proof spent on an enrolled device can't be reused.
+      if ((await fetch(`/api/devices?device=${getAddress(device.trim())}`)).ok)
+        return setError("This device is already enrolled. Open Captures to see its uploads.");
       const res = await fetch("/api/enroll");
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
@@ -43,11 +61,12 @@ export default function EnrollPage() {
     const res = await fetch("/api/enroll", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ device: getAddress(device.trim()), mac: mac.trim().toUpperCase(), result }),
+      body: JSON.stringify({ device: getAddress(device.trim()), mac: mac.trim().toUpperCase(), deviceType, result }),
     });
     const data = await res.json();
     if (!res.ok) {
-      setError(data.error ?? `HTTP ${res.status}`);
+      setConfig(null); // close the widget so its generic "declined" screen doesn't hide the real reason
+      setError(data.error ?? `Enrollment failed (HTTP ${res.status}). Try again.`);
       throw new Error(data.error);
     }
     setReceipt(data);
@@ -72,6 +91,13 @@ export default function EnrollPage() {
                 <p className="text-xs text-[var(--st-on-var)]">The glasses show their address and MAC on the OLED at boot (and on the serial monitor).</p>
               </div>
             </div>
+            <label className="block">
+              <span className="label">Device type</span>
+              <select className="field" value={deviceType} disabled={!!receipt} onChange={(e) => setDeviceType(e.target.value)}>
+                <option value="esp32-cam-glasses">Odsy glasses (ESP32)</option>
+                <option value="laptop">Laptop / Pi node</option>
+              </select>
+            </label>
             <label className="block">
               <span className="label">Device address</span>
               <input className="field mono" placeholder="0x…" value={device} disabled={!!receipt} onChange={(e) => setDevice(e.target.value)} />
@@ -108,6 +134,7 @@ export default function EnrollPage() {
               </button>
             )}
             {!ready && !receipt && <p className="text-xs text-[var(--st-on-var)]">Enter a valid address and MAC first.</p>}
+            {error && !receipt && <p role="alert" className="text-sm text-[var(--st-amber)]">{error}</p>}
           </section>
         </div>
 
@@ -132,7 +159,8 @@ export default function EnrollPage() {
           preset={orbLegacy({ signal: getAddress(device.trim()) })}
           handleVerify={register}
           onSuccess={() => setConfig(null)}
-          onError={(code) => setError(`World ID error: ${code}`)}
+          // failed_by_host_app means register() threw and already showed the gateway's reason.
+          onError={(code) => void (code !== "failed_by_host_app" && setError(WORLD_ERRORS[code] ?? `World ID error (${code}). Start the verification again.`))}
         />
       )}
     </main>
