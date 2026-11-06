@@ -22,7 +22,8 @@ const PROMPT =
   "Look at this photo and decide what the glasses should do. " +
   'Answer with JSON only: {"action":"capture"|"skip"|"stop","reason":"<one sentence>"}. ' +
   "capture = a clear, useful scene of the real world. " +
-  "skip = blurry, covered lens, nearly black or white, or a photo of nothing useful. " +
+  "skip = ONLY an image that is completely black or almost entirely dark (for example a covered lens). " +
+  "The camera is a low-resolution black-and-white sensor, so grainy, blurry, grayscale or low-detail images are normal and must be captured, not skipped. " +
   "stop = the photo shows something that must not be recorded: a face at close range, a screen with private content, a bathroom or changing room, a ID card or payment card.";
 
 /** Pulls {"action","reason"} out of a model reply. Returns null when it is not a valid decision. */

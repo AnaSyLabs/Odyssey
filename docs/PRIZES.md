@@ -4,7 +4,7 @@ Two prizes are targeted: **0G Physical AI** and **World Best Use of IDKit**. We 
 
 ## 0G Physical AI: the capture gate
 
-**Idea.** The glasses are the physical agent. Every image a device uploads is judged by a vision model on 0G Private Computer before anything is stored: `capture` (store it), `skip` (useless image) or `stop` (must not be recorded: close-up face, private screen, ID or payment card). The judge runs inside `POST /api/ingest`, so a glasses firmware only has to call the endpoint it already calls.
+**Idea.** The glasses are the physical agent. Every image a device uploads is judged by a vision model on 0G Private Computer before anything is stored: `capture` (store it), `skip` (completely black or dark image, e.g. a covered lens; the ESP camera is low-res black and white, so blurry or grainy images are kept) or `stop` (must not be recorded: close-up face, private screen, ID or payment card). The judge runs inside `POST /api/ingest`, so a glasses firmware only has to call the endpoint it already calls.
 
 ```mermaid
 flowchart LR
@@ -23,7 +23,7 @@ flowchart LR
 | Replayable | `npm run replay:gate -- path/to/images` signs and uploads images in order and writes `episodes.jsonl` | `scripts/replay-gate.ts` |
 | Safe-stop if 0G is unreachable | Timeout, 402, 429, 502, 503, or an unparseable answer all become `GateUnavailable`; the API returns `503` and stores nothing. There is no local fallback decision | `lib/gate-core.ts`, covered by `lib/gate-core.test.ts` |
 
-**What breaks if 0G is removed:** the gateway can no longer tell a usable photo from a blurry one or a private one, so it either stores everything or (as built) refuses every image upload with a 503.
+**What breaks if 0G is removed:** the gateway can no longer tell a usable photo from a black one or a private one, so it either stores everything or (as built) refuses every image upload with a 503.
 
 **Scope notes (honest).** Only `image` uploads are gated. Text, sensor, audio and video uploads pass through unchanged. The episode log holds hashes and the decision, never the image. A skipped or stopped image is judged once and not retried. The gate is on only when `OG_COMPUTE_API_KEY` is set.
 
@@ -32,7 +32,7 @@ flowchart LR
 - [ ] Get a key at pc.0g.ai (Dashboard, API Keys) and deposit 0G. Set `OG_COMPUTE_API_KEY` in `.env` and on Vercel.
 - [ ] Check the real model id with `GET {base}/models` and set `OG_COMPUTE_MODEL` if `qwen2.5-vl-72b-instruct` is not listed.
 - [ ] Run one live image. Unverified until then: the router accepting `image_url` data URLs, and the `verify_tee` field. If it rejects `verify_tee`, set `OG_COMPUTE_VERIFY_TEE=false`.
-- [ ] Record the demo: replay images including a blurry one and a private one, then switch the key off or break the URL to show the safe-stop.
+- [ ] Record the demo: replay images including a fully black one (covered lens) and a private one, then switch the key off or break the URL to show the safe-stop.
 - [ ] Submission: README and setup (done), demo video under 3 minutes, live demo link, contract addresses (README, *Deployed contracts*), team contacts.
 
 ## World Best Use of IDKit
