@@ -60,13 +60,15 @@ The video can only show what works. Owners in brackets; fill in names.
 
 ## Recorded footage
 
-The screen takes are recorded automatically from the production site (`odyssey-blush-seven.vercel.app`) at 1920×1080, with the intro skipped and a visible cursor. Signed-in pages are shown through the `/mockups` demo screens; the real proof comes from a JPEG the glasses uploaded to Arkiv and the two contracts on 0G Galileo.
+The screen takes are recorded automatically from the production site (`odyssey-blush-seven.vercel.app`) at 2880×1620, with the intro skipped, a visible cursor, and capture paused during page loads. While recording, each take logs where the important element is (a button, a field, a proof row, a transaction) at the moment it matters. The zoom renderer turns those into eased camera moves: 0.8 s ease-in-out zooms, a slow push-in while holding, and crossfades between takes. Output is a 1920×1080 silent cut.
+
+Signed-in pages are shown through the `/mockups` demo screens; the real proof comes from a JPEG the glasses uploaded to Arkiv and the two contracts on 0G Galileo.
 
 ```bash
 cd video/tools
 npm i playwright-core@1.49.1   # uses your installed Chrome, downloads no browser
-node rec.mjs                    # all 8 takes into takes/; or e.g. node rec.mjs 4
-./cut.sh                        # trims loading screens, joins takes into silent-cut.mp4
+node rec.mjs                    # all 8 takes into takes/ (video + camera targets); or e.g. node rec.mjs 4
+python3 zoom.py                 # zooms each take and joins them into silent-cut.mp4
 ```
 
 The narration that fits this cut is in [script.md](script.md). A full-length version (about 3:50, with the glasses and Claude clips) is in [script-4min.md](script-4min.md).

@@ -10,3 +10,6 @@ tools/parts/
 tools/list.txt
 tools/node_modules/
 tools/package*.json
+tools/zoomed/
+tools/silent-cut.mp4
+tools/__pycache__/
