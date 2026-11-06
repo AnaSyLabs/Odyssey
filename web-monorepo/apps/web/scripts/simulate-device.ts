@@ -27,6 +27,7 @@ async function post(path: string, body: unknown, headers: Record<string, string>
 }
 
 // Stands in for the World ID registration page.
+if (!process.env.SIM_PAYOUT_ADDRESS) throw new Error("Set SIM_PAYOUT_ADDRESS in .env: the wallet of the device owner, which receives this device's rewards");
 const reg = await post(
   "/api/devices",
   {
@@ -34,7 +35,7 @@ const reg = await post(
     worldId: process.env.SIM_WORLD_ID ?? sha256(device.address), // fake nullifier, unique per sim device
     deviceType: "esp32-cam-glasses",
     mac: process.env.SIM_MAC ?? "24:0A:C4:00:00:01",
-    ...(process.env.SIM_PAYOUT_ADDRESS && { payout: process.env.SIM_PAYOUT_ADDRESS }), // wallet that gets this device's rewards
+    payout: process.env.SIM_PAYOUT_ADDRESS, // the device owner's wallet, which gets this device's rewards
   },
   { authorization: `Bearer ${process.env.REGISTRAR_TOKEN}` },
 );
