@@ -4,6 +4,7 @@ import { bool, dec, u256, u64 } from "@arkiv-network/sdk/schema";
 import { formatEther, parseEther } from "viem";
 import { activeSubscriptions } from "@/lib/access";
 import { arkivPublic, arkivWallet, gatewayAddress } from "@/lib/arkiv";
+import { setContractPrice } from "@/lib/contract";
 import { datasetFilter } from "@/lib/filters";
 import { findSamples } from "@/lib/query";
 import { KINDS, type Kind } from "@/lib/sample";
@@ -28,13 +29,13 @@ export async function GET() {
       key: d.$key, name: d.name.value, description: Buffer.from(d.description.value.slice(2), "hex").toString("utf8"), ...f,
       price: d.price.value.toString(), priceDisplay: formatEther(d.price.value), active: d.active.value,
       samples: hits.length, samplesTruncated: truncated, kinds: [...new Set(hits.map((h) => h.kind))],
-      paidUntil: mine.find((m) => m.key === d.$key)?.paidUntil ?? null,
+      paidUntil: mine.find((m) => m.key.toLowerCase() === d.$key.toLowerCase())?.paidUntil ?? null,
     };
   }));
   return Response.json({ datasets });
 }
 
-/** Admin: create a dataset (a saved filter + a price in 0G per 30 days). */
+/** Admin: create a dataset (a saved filter + a price in 0G per 30 days) and list it on the subscriptions contract. */
 export async function POST(req: Request) {
   const session = await getSession();
   if (!session) return unauthorized();
@@ -71,5 +72,8 @@ export async function POST(req: Request) {
     },
     { expiration: ExpirationTime.max() },
   );
-  return Response.json({ key: entityKey, txHash }, { status: 201 });
+  // The contract is what labs pay; if listing it there fails, "List dataset for sale" retries it.
+  const priceTx = await setContractPrice(entityKey, price).catch((e: Error) => e);
+  if (priceTx instanceof Error) return Response.json({ key: entityKey, txHash, error: `Saved on Arkiv, but listing it on the subscriptions contract failed: ${priceTx.message}. Refresh, then unlist and list the dataset again to retry.` }, { status: 502 });
+  return Response.json({ key: entityKey, txHash, priceTx }, { status: 201 });
 }

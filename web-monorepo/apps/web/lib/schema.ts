@@ -30,6 +30,7 @@ export const Devices = defineSchema("odsy.devices", {
   worldId: str().indexed(),
   deviceType: str().indexed(),
   mac: str().indexed(),
+  payout: addr().optional(), // the owner's wallet for contributor rewards; never the key on the glasses
 });
 
 /** A dataset is a saved filter over samples, sold as a 30-day subscription paid in 0G. Empty kind/deviceType and 0 from/to mean "any". */
@@ -47,11 +48,20 @@ export const Datasets = defineSchema("odsy.datasets", {
   active: bool().indexed(),
 });
 
-/** One paid period. A renewal is a new entity whose paidUntil continues from the previous one. */
+/** Legacy: paid periods recorded before the OdsySubscriptions contract. Still honoured until they lapse. */
 export const Subscriptions = defineSchema("odsy.subscriptions", {
   subscriber: addr().indexed(),
   dataset: key().indexed(),
   txHash: str().indexed(), // the 0G Galileo payment, each usable once
   amount: u256(),
   paidUntil: u64().indexed(), // unix seconds
+});
+
+/** One published contributor-reward epoch: the leaves behind the contract's Merkle root, so claimants can get proofs. */
+export const Rewards = defineSchema("odsy.rewards", {
+  epoch: u64().indexed(),
+  root: str().indexed(),
+  total: u256(),
+  throughBlock: u64(),
+  leaves: bytes(), // JSON [[account, amountWei], ...]
 });
