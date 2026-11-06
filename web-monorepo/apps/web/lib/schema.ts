@@ -65,3 +65,10 @@ export const Rewards = defineSchema("odsy.rewards", {
   throughBlock: u64(),
   leaves: bytes(), // JSON [[account, amountWei], ...]
 });
+
+/** A wallet made admin from the /admin page. Wallets in the ADMIN_ADDRESSES env var are root admins and are not stored here. */
+export const Admins = defineSchema("odsy.admins", {
+  admin: addr().indexed(),
+  grantedBy: addr(),
+  grantedAt: u64(), // unix seconds
+});

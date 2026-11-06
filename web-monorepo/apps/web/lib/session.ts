@@ -1,5 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
+import { isAdmin } from "@/lib/admins";
 import { need } from "@/lib/arkiv";
 import { readSession, type Session, signSession } from "@/lib/token";
 
@@ -7,13 +8,10 @@ export const SESSION_COOKIE = "odsy_session";
 export const NONCE_COOKIE = "odsy_nonce";
 export const SESSION_DAYS = 7;
 
-export const isAdmin = (address: string) =>
-  (process.env.ADMIN_ADDRESSES ?? "").split(",").map((a) => a.trim().toLowerCase()).filter(Boolean).includes(address.toLowerCase());
-
 /** The signed-in wallet, or null. */
 export async function getSession(): Promise<(Session & { admin: boolean }) | null> {
   const s = readSession((await cookies()).get(SESSION_COOKIE)?.value, need("SESSION_SECRET"));
-  return s && { ...s, admin: isAdmin(s.address) };
+  return s && { ...s, admin: await isAdmin(s.address) };
 }
 
 export async function startSession(address: `0x${string}`) {
