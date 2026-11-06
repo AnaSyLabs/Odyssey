@@ -75,6 +75,13 @@ Merged through PRs #1, #2, #4, #5 and #7.
 | README deployment table and docs aligned with the live app | `129a63d` |
 | Merged to `main` (PR #8) | `a7415ee` |
 
+## M7. Subscriptions contract deployed (6 Nov 2026)
+
+| Done | Commit |
+|---|---|
+| `OdsySubscriptions` deployed to Galileo: `0xc3a946516f2f0CE3fc2065543cb0a8E9b105A54e`, tx `0xc83445b99003f52c1e12007bc8072edf5c95c54f7ae1b6cd4875b2c40f7ef980`, block 64,085,686; `owner()` and `contributorBps()` (7000) checked | (no commit: on-chain) |
+| Cause of the signed-in 500s traced to the missing `SUBSCRIPTIONS_ADDRESS` and fixed locally | (no commit: env only) |
+
 ## History note
 
 The first 25 commits were rewritten and force-pushed on 6 Nov 2026 (README, skills and web scaffold in smaller commits, no co-author trailers). Branches created before that kept the old hashes, so `git log main` also shows pre-rewrite duplicates. Use `git log --first-parent main` for the clean line.
