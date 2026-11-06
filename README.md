@@ -434,7 +434,7 @@ node -e "import('viem/accounts').then(a=>{const k=a.generatePrivateKey();console
 
 Subscribers can search and read the data they paid for from Claude, Cursor, ChatGPT's API or any other MCP client, with a bearer token. It is retrieval only: the model you connect does the answering, and it can only see what your wallet has subscribed to.
 
-**Get a token.** Sign in on the Datasets page, open the *Use your datasets in an AI tool* card and click **Create token**. It shows a ready-made client config. Tokens last 7 days and are shown once.
+**Get a token.** Sign in on the Datasets page, open the *Use your datasets in an AI tool* card and click **Create token**. It shows a copy-paste setup for Claude Code, Cursor, Claude Desktop and any other client. The server is hosted, so a new user installs and clones nothing: no local path, no runtime, only a token (Claude Desktop also needs Node.js for the bridge). Tokens last 7 days and are shown once.
 
 **Endpoint:** `POST /api/mcp` (MCP streamable HTTP, stateless, JSON replies), header `Authorization: Bearer <token>`.
 
@@ -456,7 +456,14 @@ claude mcp add --transport http odyssey https://<your-host>/api/mcp --header "Au
 { "mcpServers": { "odyssey": { "url": "https://<your-host>/api/mcp", "headers": { "Authorization": "Bearer <token>" } } } }
 ```
 
-- **Claude Desktop** (no custom headers in its connector UI): `npx mcp-remote https://<your-host>/api/mcp --header "Authorization: Bearer <token>"`.
+- **Claude Desktop** only launches local commands, so use the `mcp-remote` bridge (needs Node.js; `npx` fetches it). In `claude_desktop_config.json`:
+
+  ```json
+  { "mcpServers": { "odyssey": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://<your-host>/api/mcp", "--header", "Authorization:${ODYSSEY_AUTH}"],
+      "env": { "ODYSSEY_AUTH": "Bearer <token>" } } } }
+  ```
 - **ChatGPT and the OpenAI API:** the Responses API takes an MCP tool with `server_url` and `headers`. ChatGPT's own connector screen asks for OAuth, which this server does not offer yet.
 - **Anything else:** any MCP client that speaks HTTP and can set a header.
 
