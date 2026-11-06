@@ -107,7 +107,7 @@ The prototype is an **AI-Thinker ESP32-CAM** with a **0.96" SSD1306 OLED**.
 * **`odsy_crypto.h`:** keccak-256, Ethereum address derivation and recoverable low-s ECDSA (EIP-191 `personal_sign`) on top of the mbedtls bundled with the ESP32 Arduino core.
 * **`test/`:** a PC self-check that runs the same crypto code and has viem recover every signature (instructions at the top of `test/crypto_test.cpp`).
 
-Settings at the top of the sketch: Wi-Fi credentials, `ingestUrl` (the deployed app, or `http://<laptop-ip>:3000/api/ingest` for local dev), and `DEVICE_LAT` / `DEVICE_LON`. The glasses have no GPS, so every sample is signed with that fixed location.
+Settings at the top of the sketch: Wi-Fi credentials, `ingestUrl` (the deployed app, or `http://<laptop-ip>:3000/api/ingest` for local dev), and `DEVICE_LAT` / `DEVICE_LON`. The glasses have no GPS, so every sample is signed with that fixed location (Bandra West, Mumbai: `19.0596, 72.8295`, the same as `scripts/simulate-device.ts`).
 
 Requires the ESP32 Arduino core 3.x (mbedtls 3.6 with secp256k1 enabled) and the Adafruit SSD1306 and GFX libraries.
 
