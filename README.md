@@ -215,7 +215,8 @@ npm run dev   # http://localhost:3000
 ├── .claude/       Agent skills (Solidity security, OpenZeppelin, token checks)
 ├── .cursor/       Cursor rules (Ponytail)
 ├── AGENTS.md      Rules for AI coding agents
-└── CLAUDE.md      Loads AGENTS.md for Claude Code
+├── CLAUDE.md      Loads AGENTS.md for Claude Code
+└── LICENSE        MIT
 ```
 
 ## Arkiv data layer (built)
@@ -594,6 +595,14 @@ Buy datasets with a **provenance proof per sample**: the device that captured it
 ## For contributors
 
 Wear it, capture your world, get paid. Your data is encrypted, your identity stays private (World ID reveals nothing about who you are), and you can revoke it.
+
+## AI use
+
+We built this with AI coding assistants: Claude Code and Cursor wrote much of the web app, contracts, tests and docs, under the rules in [AGENTS.md](AGENTS.md) and [.cursor/rules](.cursor/rules). The team chose the design, reviewed and tested the changes, and ran the on-chain deployments and live tests. The Solidity audit and OpenZeppelin skills in `.claude/skills/` are third-party and keep their own licenses.
+
+## License
+
+[MIT](LICENSE). Third-party code keeps its own license: the git submodules under `contracts/lib/` (OpenZeppelin Contracts, forge-std) and each skill under `.claude/skills/` (see its `LICENSE` file).
 
 ---
 

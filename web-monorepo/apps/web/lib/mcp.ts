@@ -1,5 +1,4 @@
 import "server-only";
-import { addr } from "@arkiv-network/sdk/schema";
 import { activeSubscriptions, hexBytes, loadSample, open, readAccess } from "@/lib/access";
 import { arkivPublic, gatewayAddress } from "@/lib/arkiv";
 import { datasetFilter } from "@/lib/filters";

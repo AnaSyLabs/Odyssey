@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- the tests read untyped JSON-RPC replies */
 import assert from "node:assert/strict";
 import test from "node:test";
 import { handleRpc, mintToken, rank, readToken, type Tool } from "./mcp-core.ts";
