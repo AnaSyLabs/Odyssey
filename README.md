@@ -121,7 +121,7 @@ npm run dev   # http://localhost:3000
 │                   lib (arkiv, geo, crypto, sessions, payments, 0G, sample protocol),
 │                   scripts/simulate-device.ts (fake glasses), scripts/lab-ingest.ts (lab-side verified sync)
 ├── firmware/      ESP32 glasses: mic, IR camera, IMU, OLED, device signing
-├── contracts/     Foundry: Odsy token, batch Merkle root anchor, rewards
+├── contracts/     Foundry: ConsensusRegistry (tile verdicts and the two-strike ban); token and rewards to come
 ├── docs/          Screenshots used in this README
 ├── .claude/       Agent skills (Solidity security, OpenZeppelin, token checks)
 ├── .cursor/       Cursor rules (Ponytail)
@@ -310,6 +310,39 @@ node -e "import('viem/accounts').then(a=>{const k=a.generatePrivateKey();console
 - **Privacy.** MAC addresses and World ID nullifiers are public on Arkiv. Images can show bystanders. Before real users: hash or drop the MAC and blur faces at the gateway. Immutable personal data also conflicts with GDPR and DPDP deletion rights. Per-sample keys make crypto-shredding possible, by destroying `DATA_KEY`, but only for all samples at once.
 - **Live-tested so far:** device registration, plaintext and encrypted ingest (text and sensor samples), geo queries, wallet sign-in, dataset creation and the lab ingest job's sign-in and dataset lookup, all against Arkiv Rabdi. Not yet confirmed end to end on live networks: a paid subscription unlocking decryption, lab ingest writing decrypted files, payloads over 96 KiB on 0G, the Transactions log and the retention job.
 - **Scale shortcuts** are marked `shortcut:` in code. The geo scan stops at 2,000 candidates. Duplicate and registration checks can race. The extend job runs in a single request.
+
+## Consensus contract
+
+`contracts/src/ConsensusRegistry.sol` decides whether a neighbourhood of data is good, and bans bad actors.
+
+**In plain words.** The map is cut into hexagons. For each hexagon and each day (a *tile*) we spot-check a few random clips, like a teacher checking a few pages of homework.
+
+1. Too few clips or devices in the hexagon? It waits.
+2. Otherwise validators check a handful of clips and each says how many passed. The middle answer wins.
+3. If two thirds passed, the tile is accepted and contributors get paid. If not, it is rejected.
+4. **Two strikes:** a device caught with *provable* bad data twice (fake signature, copied clip, failed honeypot, impossible location) gets its World ID banned. Its data from the first strike onward is left out. Being outvoted is never a strike. Admins can lift a ban.
+
+**Settings.** Shared rules are fixed at deploy from env vars (copy `contracts/.env.example` to `contracts/.env`). Each dataset picks its own within them.
+
+| Env var | Plain meaning | Default |
+|---|---|---|
+| `QUORUM_BPS` | Share of checked clips that must pass (6667 = two thirds) | 6667 |
+| `COMMITTEE_SIZE` | Validator votes needed per tile | 5 |
+| `MIN_SAMPLE_RATE_BPS` | Lowest spot-check rate a dataset may choose (100 = 1%) | 100 |
+| `MIN_CHECKS` | Every tile gets at least this many checks | 3 |
+| `STRIKE_LIMIT` | Alerts before a ban | 2 |
+| `ADMIN` / `OPERATOR` | Who can lift bans and add validators / the gateway wallet | required |
+
+Per dataset (`createDataset`): hex size (H3 res 6 to 10), time bucket, minimum clips and devices, check rate, pass mark.
+
+```bash
+cd contracts
+forge install --no-git foundry-rs/forge-std OpenZeppelin/openzeppelin-contracts
+forge test
+forge script script/Deploy.s.sol --rpc-url $RPC_URL --private-key $DEPLOYER_KEY --broadcast
+```
+
+Limits of this first version: validators are an allowlist with one vote each (no staking, commit-reveal or challenges yet), rules can't change without redeploying, and the gateway does not call the contract yet. It has not been audited.
 
 ## Roadmap
 
