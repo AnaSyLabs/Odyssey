@@ -92,10 +92,10 @@ export default function Docs() {
             rows={[
               ["Capture and sign", "Secure element signs hash, time and witnesses", "Device key signs content hash, kind, mime, time, lat/lon and sensors hash. Location is pinned to Bandra until GPS lands."],
               ["One human, one device", "World ID per device", "Registry on Arkiv binds a device key to a World ID nullifier, one device per human. The proof is checked by the registration page."],
-              ["Filter", "TEE gateway: blur, dedupe, quality", "Signature, registration and duplicate checks. No blurring or quality scoring yet."],
+              ["Filter", "TEE gateway: blur, dedupe, quality", "Signature, registration, ban and duplicate checks. A clip replayed from another human is a strike. No blurring or quality scoring yet."],
               ["Store", "Encrypted batches on 0G", "Encrypted per sample: inline on Arkiv up to 96 KiB, 0G Storage above that."],
               ["Anchor", "One Merkle root per batch on-chain", "Each sample is a readonly Arkiv entity. Batch roots on a long-lived chain are still to come."],
-              ["Verify", "Staked VRF committee", "Not built. The consensus map under /mockups shows the design."],
+              ["Verify", "Staked VRF committee", "ConsensusRegistry is deployed on Galileo: allowlisted validators vote on each hex tile and two provable strikes ban a World ID. No staking or VRF yet; the consensus map under /mockups shows the design."],
               ["Pay", "Rewards root per epoch", "Labs pay the subscriptions contract in 0G. 70 % is split pro rata by samples to each device's payout wallet, published as a Merkle root per epoch, and claimed on-chain."],
             ]}
           />
@@ -286,6 +286,14 @@ export default function Docs() {
               The contract is <Mono>contracts/src/ConsensusRegistry.sol</Mono>. The shared settings are set once at deploy from{" "}
               <Mono>contracts/.env.example</Mono>; each dataset picks its own hexagon size, check rate and pass mark within them.
             </P>
+            <P>
+              It is live on 0G Galileo at{" "}
+              <a className="underline" href="https://chainscan-galileo.0g.ai/address/0x83bea227e5D2C72f8F0F73E63175759D4E6055DC">
+                <Mono>0x83be…55DC</Mono>
+              </a>
+              . The gateway checks it on every upload, registration and read, so a banned World ID can&apos;t upload, register a new
+              device or have its data decrypted. It is a testnet deploy with three throwaway validators and has not been audited.
+            </P>
           </Note>
         </Section>
 
@@ -341,6 +349,7 @@ reward = base × quality score × rarity
           <P><b>Done:</b> signed uploads, device registry, encrypted storage on Arkiv and 0G, geo search, dataset subscriptions on a contract with a contributor split, and lab ingest. <b>Next:</b> batch roots on a long-lived chain, real hardware with GPS.</P>
           <H3>Phase 2 · Stake it</H3>
           <P>Permissioned staked validators, honeypots, challenge window and slashing.</P>
+          <P><b>Done:</b> the consensus contract on Galileo (validator median per tile, two-strike ban) and its enforcement in the gateway. <b>Next:</b> staking and slashing, commit-reveal, honeypots and a challenge window.</P>
           <H3>Phase 3 · Open it</H3>
           <P>Permissionless validators, TEE gateways, rarity rewards and the lab marketplace with licensing.</P>
           <H3>Phase 4 · Value it</H3>

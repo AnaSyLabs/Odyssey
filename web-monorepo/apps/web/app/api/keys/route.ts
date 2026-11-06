@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   const denied: string[] = [];
   for (const k of b.keys) {
     const s = await loadSample(String(k));
-    if (s?.enc?.value && canRead(s)) keys[s.$key] = `0x${keyFor(s.contentHash.value).toString("hex")}`;
+    if (s?.enc?.value && (await canRead(s))) keys[s.$key] = `0x${keyFor(s.contentHash.value).toString("hex")}`;
     else denied.push(String(k));
   }
   return Response.json({ keys, denied });

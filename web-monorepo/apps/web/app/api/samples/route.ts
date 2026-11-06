@@ -46,6 +46,6 @@ export async function GET(req: Request) {
     scanned,
     truncated,
     total: hits.length,
-    samples: hits.slice(0, limit).map(({ row, ...h }) => ({ ...h, readable: !h.encrypted || canRead(row) })),
+    samples: await Promise.all(hits.slice(0, limit).map(async ({ row, ...h }) => ({ ...h, readable: !h.encrypted || (await canRead(row)) }))),
   });
 }
