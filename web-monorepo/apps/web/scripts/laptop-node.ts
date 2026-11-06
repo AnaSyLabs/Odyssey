@@ -46,7 +46,15 @@ async function post(path: string, body: unknown, headers: Record<string, string>
 }
 const registered = async () => (await fetch(`${GATEWAY}/api/devices?device=${device.address}`)).ok;
 
-console.log(`laptop node ${device.address} (MAC ${mac}), key in ${keyFile}`);
+const time = () => new Date().toTimeString().slice(0, 8);
+console.log(`
+Odsy laptop node
+  address  ${device.address}
+  MAC      ${mac}
+  key      ${keyFile}
+  gateway  ${GATEWAY}
+  capture  photo${audio ? " + 5 s audio" : ""}, ${every ? `every ${every} s` : "once"}
+`);
 if (!(await registered())) {
   if (args.includes("--sim")) {
     // Dev only (needs REGISTRAR_TOKEN): a fake World ID, like the simulator. Real nodes enroll below.
@@ -55,12 +63,15 @@ if (!(await registered())) {
       { device: device.address, worldId: sha256(device.address), deviceType: "laptop", mac, ...(process.env.SIM_PAYOUT_ADDRESS && { payout: process.env.SIM_PAYOUT_ADDRESS }) },
       { authorization: `Bearer ${process.env.REGISTRAR_TOKEN}` },
     );
-    console.log("register", reg.status, reg.body);
-    if (reg.status !== 201 && reg.status !== 409) process.exit(1);
+    if (reg.status !== 201 && reg.status !== 409) {
+      console.error(`Registration failed (${reg.status}): ${reg.body?.error ?? JSON.stringify(reg.body)}`);
+      process.exit(1);
+    }
+    console.log("Registered with a simulated World ID (--sim).\n");
   } else {
-    console.log(`Not enrolled. Open this, sign in and verify with World ID:\n${GATEWAY}/enroll?device=${device.address}&mac=${mac}&type=laptop`);
+    console.log(`Not enrolled yet. Open this link, sign in and verify with World ID:\n\n  ${GATEWAY}/enroll?device=${device.address}&mac=${mac}&type=laptop\n\nWaiting for enrollment...`);
     while (!(await registered())) await new Promise((r) => setTimeout(r, 5000));
-    console.log("enrolled");
+    console.log("Enrolled.\n");
   }
 }
 
@@ -71,7 +82,10 @@ async function upload(kind: "image" | "audio", mime: string, data: Buffer) {
   };
   const signature = await device.signMessage({ message: sampleMessage(u, sha256(data)) });
   const res = await post("/api/ingest", { ...u, data: data.toString("base64"), signature });
-  console.log(new Date().toISOString(), kind, `${data.length} B`, res.status, res.body?.entityKey ?? res.body?.error ?? res.body);
+  const size = `${(data.length / 1024).toFixed(1)} KB`.padStart(9);
+  console.log(res.status === 201
+    ? `${time()}  ${kind.padEnd(5)} ${size}  uploaded  ${res.body.entityKey}`
+    : `${time()}  ${kind.padEnd(5)} ${size}  FAILED ${res.status}: ${res.body?.error ?? JSON.stringify(res.body)}`);
 }
 
 do {
@@ -79,7 +93,7 @@ do {
     await upload("image", "image/jpeg", photo());
     if (audio) await upload("audio", "audio/wav", clip());
   } catch (e) {
-    console.error("capture failed:", (e as Error).message); // keep running: a busy camera or a gateway blip is not fatal
+    console.error(`${time()}  capture failed: ${(e as Error).message}`); // keep running: a busy camera or a gateway blip is not fatal
   }
   if (every) await new Promise((r) => setTimeout(r, every * 1000));
 } while (every);

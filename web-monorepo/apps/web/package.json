@@ -10,7 +10,8 @@
     "test": "node --test lib/*.test.ts lib/*.test.mjs",
     "simulate": "node --env-file=.env scripts/simulate-device.ts",
     "replay:gate": "node --env-file=.env scripts/replay-gate.ts",
-    "laptop-node": "node --env-file-if-exists=.env scripts/laptop-node.ts",
+    "laptop-node": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env scripts/laptop-node.ts",
+    "device:delete": "node --no-experimental-webstorage --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env scripts/delete-device.ts",
     "lab:ingest": "node --env-file-if-exists=.env scripts/lab-ingest.ts",
     "rewards:publish": "node --env-file=.env scripts/publish-rewards.ts"
   },
