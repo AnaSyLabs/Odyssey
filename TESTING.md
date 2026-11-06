@@ -92,7 +92,10 @@ Set `OG_COMPUTE_API_KEY` (pc.0g.ai, with deposited 0G) and restart. Use a regist
 3. A `capture` is stored on Arkiv; `skip` and `stop` return `stored:false`. `stop` halts the replay.
 4. Set `OG_COMPUTE_BASE_URL` to a dead address and replay again: every image is `SAFE-STOP` (HTTP 503) and nothing is stored.
 
+5. Set `OG_LABELS=true`, restart and replay again. A captured image's `GET /api/samples/<key>` now has a `scene`. With `OG_LABELS` unset or `false` there is no `scene` and nothing else changes.
+
 - [ ] captures are stored, skips and stops are not
+- [ ] with `OG_LABELS=true`, stored images carry a `scene`; without it they do not
 - [ ] every decision has an `episodeRoot` that downloads from 0G Storage
 - [ ] a dead 0G gives 503 and no Arkiv write
 
