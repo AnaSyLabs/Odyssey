@@ -71,6 +71,19 @@ node rec.mjs                    # all 8 takes into takes/ (video + camera target
 python3 zoom.py                 # zooms each take and joins them into silent-cut.mp4
 ```
 
+### Guide-voice cut
+
+A rehearsal version with an AI voice (ElevenLabs), so whoever narrates can hear the pacing. **Not for the ETHGlobal upload**: the rules reject AI or text-to-speech voiceover. Clips the team still has to film live get a placeholder card describing the shot.
+
+```bash
+# key in ~/.elevenlabs_key (sk_..., text-to-speech permission), never in the repo
+STRETCH="$(cat stretch.json)" node rec.mjs   # optional: pace each take to its narration
+python3 zoom.py
+node cards.mjs                                # placeholder cards for the live clips (02b, 06b)
+python3 voice.py                              # narration per section into vo/ (cached)
+python3 assemble.py                           # takes + cards + voice -> odyssey-demo-AI-VOICE.mp4, checked against 2:00-4:00
+```
+
 The narration that fits this cut is in [script.md](script.md). A full-length version (about 3:50, with the glasses and Claude clips) is in [script-4min.md](script-4min.md).
 
 ## Takes
