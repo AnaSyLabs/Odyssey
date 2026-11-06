@@ -60,8 +60,9 @@ export default function Docs() {
         <Section id="live" title="What's live today">
           <P>
             The first slice runs end to end on testnets: devices sign samples, a gateway verifies and encrypts them, and
-            every sample becomes an entity on <b>Arkiv</b> (Rabdi testnet). Labs sign in with a wallet, pay in test 0G on
-            <b> 0G Galileo</b>, and get per-sample keys to decrypt what their subscription covers.
+            every sample becomes an entity on <b>Arkiv</b> (Rabdi testnet). Labs sign in with a wallet, pay the
+            <b> OdsySubscriptions</b> contract in test 0G on <b>0G Galileo</b>, and get per-sample keys to decrypt what
+            their subscription covers. 70 % of every payment goes to the contributors behind the dataset.
           </P>
           <Figure n={1} title="Live today: device to lab" w={1000} h={300}
             caption="Metadata is public on Arkiv so anyone can search it and check signatures. Payloads and sensor readings are ciphertext; only admins and subscribers get the keys.">
@@ -80,7 +81,7 @@ export default function Docs() {
             <Edge pts={[[485, 200], [545, 100]]} />
             <Edge pts={[[485, 220], [545, 210]]} />
             <Group x={760} y={20} w={230} h={260} label="LABS" />
-            <Node x={775} y={60} w={200} h={80} title="Subscribe" tech="SIWE · pay 0G" lines={["30-day dataset access"]} tone="accent" />
+            <Node x={775} y={60} w={200} h={80} title="Subscribe" tech="SIWE · contract" lines={["30 days · 70 % to contributors"]} tone="accent" />
             <Node x={775} y={170} w={200} h={80} title="Ingest" tech="keys from gateway" lines={["verify · decrypt locally"]} />
             <Edge pts={[[875, 140], [875, 170]]} />
             <Edge pts={[[715, 210], [775, 210]]} dashed label="read" />
@@ -94,7 +95,7 @@ export default function Docs() {
               ["Store", "Encrypted batches on 0G", "Encrypted per sample: inline on Arkiv up to 96 KiB, 0G Storage above that."],
               ["Anchor", "One Merkle root per batch on-chain", "Each sample is a readonly Arkiv entity. Batch roots on a long-lived chain are still to come."],
               ["Verify", "Staked VRF committee", "Not built. The consensus map under /mockups shows the design."],
-              ["Pay", "Rewards root per epoch", "Labs pay 0G per dataset. Contributor payouts are not built."],
+              ["Pay", "Rewards root per epoch", "Labs pay the subscriptions contract in 0G. 70 % is split pro rata by samples to each device's payout wallet, published as a Merkle root per epoch, and claimed on-chain."],
             ]}
           />
           <H3>Each sample on Arkiv</H3>
@@ -132,7 +133,7 @@ export default function Docs() {
             actors={[
               { id: "lab", label: "Lab wallet", tech: "MetaMask" },
               { id: "app", label: "Gateway", tech: "Next.js API" },
-              { id: "og", label: "0G Galileo", tech: "payment" },
+              { id: "og", label: "Contract", tech: "0G Galileo" },
               { id: "ark", label: "Arkiv", tech: "Rabdi" },
             ]}
             steps={[
@@ -140,10 +141,9 @@ export default function Docs() {
               { from: "lab", to: "app", label: "SIWE message + signature" },
               { from: "app", to: "lab", label: "session cookie", reply: true },
               { section: "2 · PAY" },
-              { from: "lab", to: "og", label: "price → treasury, data = dataset key" },
-              { from: "lab", to: "app", label: "tx hash" },
-              { from: "app", to: "og", label: "check receipt" },
-              { from: "app", to: "ark", label: "write subscription (paidUntil)" },
+              { from: "lab", to: "og", label: "subscribe(dataset) + price" },
+              { self: "og", label: "paidUntil += 30 days · 70 % to contributors" },
+              { from: "app", to: "og", label: "read paidUntil" },
               { section: "3 · READ" },
               { from: "lab", to: "app", label: "per-sample keys" },
               { from: "lab", to: "ark", label: "ciphertext + metadata" },
@@ -152,7 +152,8 @@ export default function Docs() {
           />
           <Ul>
             <li><b>Datasets</b> are saved filters (area, kind, device model, time range) with a price in 0G per 30 days. New captures that match are included automatically.</li>
-            <li><b>Payments</b> are checked by the gateway: from the signed-in wallet, to the treasury, at least the price, the dataset key in the transaction data, and never used before. Renewals stack.</li>
+            <li><b>Payments</b> go to the <Mono>OdsySubscriptions</Mono> contract, which enforces the exact price and records <Mono>paidUntil</Mono> in the same transaction. Renewals stack, up to 150 days ahead.</li>
+            <li><b>Contributors</b> get 70 % of each payment (never less than 50 %). Each epoch the gateway splits it pro rata by samples to each device&apos;s payout wallet and publishes a Merkle root; contributors claim from Transactions. The treasury can never withdraw contributor funds.</li>
             <li><b>Keys</b> are released per sample and only while a subscription covers it. Admins can read everything.</li>
             <li><b>The app</b> asks for a wallet sign-in before Datasets, Explore, the dataset map and Transactions. Signing a message costs no gas; signing out also disconnects the site in the wallet.</li>
             <li><b>Lab ingest</b> (<Mono>npm run lab:ingest</Mono>) pulls subscribed datasets into the lab&apos;s own storage, re-checking every sample, with an option to keep only the samples the retention policy keeps.</li>
@@ -298,7 +299,7 @@ reward = base × quality score × rarity
         <Section id="roadmap" title="Roadmap">
           <H3>Phase 1 · Prove it</H3>
           <P>Device signing, uploads, batch roots on-chain, test-token rewards. The team does the spot-checks.</P>
-          <P><b>Done:</b> signed uploads, device registry, encrypted storage on Arkiv and 0G, geo search, paid dataset subscriptions and lab ingest. <b>Next:</b> batch roots on a long-lived chain, contributor rewards, real hardware with GPS.</P>
+          <P><b>Done:</b> signed uploads, device registry, encrypted storage on Arkiv and 0G, geo search, dataset subscriptions on a contract with a contributor split, and lab ingest. <b>Next:</b> batch roots on a long-lived chain, real hardware with GPS.</P>
           <H3>Phase 2 · Stake it</H3>
           <P>Permissioned staked validators, honeypots, challenge window and slashing.</P>
           <H3>Phase 3 · Open it</H3>
