@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "node --test lib/*.test.ts lib/*.test.mjs",
     "simulate": "node --env-file=.env scripts/simulate-device.ts",
+    "replay:gate": "node --env-file=.env scripts/replay-gate.ts",
     "lab:ingest": "node --env-file-if-exists=.env scripts/lab-ingest.ts",
     "rewards:publish": "node --env-file=.env scripts/publish-rewards.ts"
   },
