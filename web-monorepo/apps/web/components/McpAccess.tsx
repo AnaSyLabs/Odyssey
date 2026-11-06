@@ -22,7 +22,14 @@ export default function McpAccess() {
 
   const bearer = `Bearer ${token}`;
   const snippet = {
-    "Claude Code": `claude mcp add --transport http odyssey ${url} --header "Authorization: ${bearer}"`,
+    "Claude Code": [
+      "# Option A: the CLI",
+      `claude mcp add --transport http odyssey ${url} --header "Authorization: ${bearer}"`,
+      "",
+      "# Option B, no CLI: export the token, and save this as .mcp.json in your project",
+      `export ODYSSEY_TOKEN=${token}`,
+      JSON.stringify({ mcpServers: { odyssey: { type: "http", url, headers: { Authorization: "Bearer ${ODYSSEY_TOKEN}" } } } }, null, 2),
+    ].join("\n"),
     Cursor: JSON.stringify({ mcpServers: { odyssey: { url, headers: { Authorization: bearer } } } }, null, 2),
     // Claude Desktop only launches local commands, so mcp-remote (run by npx, needs Node) bridges to the hosted server.
     "Claude Desktop": JSON.stringify(
@@ -33,7 +40,7 @@ export default function McpAccess() {
     Other: `POST ${url}\nAuthorization: ${bearer}\nContent-Type: application/json\n\n{"jsonrpc":"2.0","id":1,"method":"tools/list"}`,
   }[tab];
   const where = {
-    "Claude Code": "Run in a terminal.",
+    "Claude Code": "Option A needs the claude command in your terminal. Option B only needs a file, and keeps the token out of it.",
     Cursor: "Save as .cursor/mcp.json in your project, or ~/.cursor/mcp.json for every project.",
     "Claude Desktop": "Add to claude_desktop_config.json (Settings → Developer → Edit Config), then restart. Needs Node.js.",
     Other: "Any MCP client that speaks streamable HTTP and can set a header. Or call it directly:",
