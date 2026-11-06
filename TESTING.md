@@ -83,6 +83,19 @@ Needs a World ID app with a `register-device` action (developer.world.org; use a
 - [ ] enrollment registers the device and sets the payout wallet
 - [ ] a proof for a different device address is rejected
 
+### 2c. Capture gate (optional, needs a 0G Compute key)
+
+Set `OG_COMPUTE_API_KEY` (pc.0g.ai, with deposited 0G) and restart. Use a registered device (`npm run simulate`) and keep its `DEVICE_PRIVATE_KEY` in `.env`.
+
+1. Put a few photos in a folder: a clear street scene, a fully black shot (cover the lens), and a harmless "private" one such as a close-up of an ID card mock.
+2. `npm run replay:gate -- path/to/folder`. Each line shows the decision, reason, 0G request id and episode log root.
+3. A `capture` is stored on Arkiv; `skip` and `stop` return `stored:false`. `stop` halts the replay.
+4. Set `OG_COMPUTE_BASE_URL` to a dead address and replay again: every image is `SAFE-STOP` (HTTP 503) and nothing is stored.
+
+- [ ] captures are stored, skips and stops are not
+- [ ] every decision has an `episodeRoot` that downloads from 0G Storage
+- [ ] a dead 0G gives 503 and no Arkiv write
+
 ## 3. Consensus contract and the ban
 
 ### 3a. Deploy and check

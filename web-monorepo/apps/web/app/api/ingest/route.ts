@@ -6,6 +6,8 @@ import { keyFor } from "@/lib/access";
 import { raiseAlert, isBanned } from "@/lib/consensus";
 import { arkivPublic, arkivWallet, findDevice, gatewayAddress, Samples } from "@/lib/arkiv";
 import { ENC, encrypt } from "@/lib/crypto";
+import { gate, gateEnabled, logEpisode } from "@/lib/gate";
+import { GateUnavailable } from "@/lib/gate-core";
 import { geohash } from "@/lib/geo";
 import { uploadTo0G } from "@/lib/og";
 import { KINDS, sampleMessage, sha256, type Upload } from "@/lib/sample";
@@ -56,6 +58,25 @@ export const POST = route(async function POST(req: Request) {
   if (dup.entities.length && dup.entities[0].worldId.value !== reg.worldId.value) await raiseAlert(reg.worldId.value, "replay", contentHash);
   if (dup.entities.length) return Response.json({ error: "duplicate", entityKey: dup.entities[0].$key }, { status: 409 });
 
+  // Capture gate: a 0G vision model decides capture / skip / stop for each image. If 0G cannot answer we stop
+  // and store nothing; there is no local fallback decision.
+  let decision, episode;
+  if (gateEnabled() && u.kind === "image") {
+    const base = { device, contentHash };
+    try {
+      decision = await gate({ data, mime: u.mime, kind: u.kind });
+    } catch (e) {
+      if (!(e instanceof GateUnavailable)) throw e;
+      console.error("capture gate safe-stop:", e.message);
+      return Response.json({ error: "safe-stop: capture gate unavailable, nothing stored", detail: e.message }, { status: 503, headers: { "retry-after": "30" } });
+    }
+    if (decision.action !== "capture") {
+      const episodeRoot = await logEpisode({ ...base, ...decision, outcome: decision.action === "stop" ? "stopped" : "skipped" });
+      return Response.json({ stored: false, decision, episodeRoot });
+    }
+    episode = base;
+  }
+
   // Encrypted before it leaves the gateway; subscribers get the per-sample key from /api/keys.
   const key = keyFor(contentHash);
   const sealed = encrypt(data, key, contentHash);
@@ -86,8 +107,9 @@ export const POST = route(async function POST(req: Request) {
     },
     { expiration: ExpirationTime.max(), flags: { readonly: true } },
   );
+  const episodeRoot = decision && episode ? await logEpisode({ ...episode, ...decision, outcome: "stored" }) : undefined;
   return Response.json(
-    { entityKey, txHash, expiresAt: expiresAt.toString(), device, contentHash, storage: inline ? "inline" : "0g", ogRoot },
+    { entityKey, txHash, expiresAt: expiresAt.toString(), device, contentHash, storage: inline ? "inline" : "0g", ogRoot, decision, episodeRoot },
     { status: 201 },
   );
 });
