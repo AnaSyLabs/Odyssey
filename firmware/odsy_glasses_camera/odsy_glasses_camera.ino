@@ -17,16 +17,20 @@
 #include "odsy_crypto.h"
 
 // ==================== 1. SETTINGS ====================
-const char* ssid     = "Aatif";
-const char* password = "thug4life";
+// Tried in order at boot. If none connects, the glasses ask for a network over Serial
+// (laptop -> USB -> UART bridge ESP32 -> cam), 115200 baud, line ending "Newline".
+const char* WIFI_NETWORKS[][2] = {
+  {"AatifPhone", "thug4life"},
+  {"Ekas's iPhone", "treepsake777"},
+};
 
 // Your deployed app (https) or a local `next dev` (http://<laptop-ip>:3000/api/ingest).
-const char* ingestUrl = "https://YOUR-APP.vercel.app/api/ingest";
+const char* ingestUrl = "https://odyssey-blush-seven.vercel.app/api/ingest";
 
-// No GPS on the glasses: every photo is signed with this fixed location. Set it to where you test.
-// Decimal strings, at most 9 decimals, as /api/ingest validates them.
-const char* DEVICE_LAT = "0.0";
-const char* DEVICE_LON = "0.0";
+// shortcut: no GPS on the glasses, every photo is signed at Bandra West, Mumbai (same as scripts/simulate-device.ts);
+// replace with a GPS fix once the hardware has one. Decimal strings, at most 9 decimals, as /api/ingest validates them.
+const char* DEVICE_LAT = "19.0596";
+const char* DEVICE_LON = "72.8295";
 
 // ==================== 2. HARDWARE PINS ====================
 #define TRIGGER_PIN   13   // touch to GND = LOW (internal pull-up)
@@ -70,20 +74,30 @@ static int hwRandom(void*, unsigned char* out, size_t len) {
   return 0;
 }
 
-void showLines(const char* a, const char* b = "", const char* c = "", const char* d = "") {
+// ==================== OLED SCREENS ====================
+// Text is 6 px per character at size 1 (21 per line), 12 px at size 2 (10 per line).
+void centered(const char* text, int y, int size = 1) {
+  display.setTextSize(size);
+  int w = strlen(text) * 6 * size;
+  display.setCursor(w < SCREEN_WIDTH ? (SCREEN_WIDTH - w) / 2 : 0, y);
+  display.print(text);
+}
+
+// Inverted title bar, one large headline, two small lines.
+void screen(const char* title, const char* headline, const char* line1 = "", const char* line2 = "") {
   display.clearDisplay();
-  display.setTextSize(1);
+  display.fillRect(0, 0, SCREEN_WIDTH, 11, SSD1306_WHITE);
+  display.setTextColor(SSD1306_BLACK);
+  centered(title, 2);
   display.setTextColor(SSD1306_WHITE);
-  const char* lines[] = {a, b, c, d};
-  for (int i = 0; i < 4; i++) {
-    display.setCursor(0, i * 16);
-    display.print(lines[i]);
-  }
+  centered(headline, 17, 2);
+  centered(line1, 41);
+  centered(line2, 53);
   display.display();
 }
 
 void halt(const char* why) {
-  showLines("ERROR", why);
+  screen("ODYSSEY", "Error", why, "Restart the glasses");
   Serial.println(why);
   while (true) delay(1000);
 }
@@ -141,58 +155,105 @@ int uploadSigned(const uint8_t* jpg, size_t jpgLen, long capturedAt) {
   http.setTimeout(30000);  // the gateway writes to Arkiv before it answers
   http.addHeader("Content-Type", "application/json");
   int code = http.POST((uint8_t*)body, n);
-  Serial.printf("POST %d: %s\n", code, http.getString().c_str());
+  String reply = http.getString();
+  Serial.printf("POST %d: %s\n", code, reply.c_str());
   http.end();
   free(body);
-  return code;
+  // The gateway also answers 403 for a banned World ID; tell the two apart on screen.
+  return code == 403 && reply.indexOf("banned") >= 0 ? -403 : code;
 }
 
 void captureAndSend(camera_fb_t* fb) {
-  display.invertDisplay(true);
+  display.invertDisplay(true);  // shutter flash
   delay(80);
   display.invertDisplay(false);
-  showLines("CAPTURED", "Signing + sending...");
 
   time_t now = time(nullptr);
   uint8_t* jpg = nullptr;
   size_t jpgLen = 0;
-  char line[24];
   if (WiFi.status() != WL_CONNECTED) {
-    showLines("WiFi not connected");
+    screen("NO CONNECTION", "No Wi-Fi", "Check the hotspot", "then touch again");
   } else if (now < 1700000000) {
-    showLines("No clock (NTP)", "Check Wi-Fi");
+    screen("NOT READY", "No clock", "Waiting for time sync", "Try again shortly");
   } else if (!fmt2jpg(fb->buf, fb->len, fb->width, fb->height, PIXFORMAT_GRAYSCALE, 85, &jpg, &jpgLen)) {
-    showLines("JPEG encode failed");
+    screen("CAPTURE FAILED", "Camera", "Image encode failed", "Touch to retry");
   } else {
+    screen("CAPTURE", "Sending", "Signing on device", "Uploading to Odyssey");
     int code = uploadSigned(jpg, jpgLen, (long)now);
     free(jpg);
-    snprintf(line, sizeof line, "HTTP %d", code);
-    if (code == 201) showLines("SAVED + SIGNED", line);
-    else if (code == 403) showLines("NOT ENROLLED", line, "Enroll at /enroll");
-    else showLines("UPLOAD FAILED", line, "See serial log");
+    char detail[22];
+    snprintf(detail, sizeof detail, "Server code %d", code);
+    if (code == 201) screen("ODYSSEY", "Image sent", "Signed and stored", "Touch for another");
+    else if (code == 409) screen("ODYSSEY", "Duplicate", "Image already stored", "Touch for another");
+    else if (code == 403) screen("NOT ENROLLED", "Blocked", "Enroll this device", "at Odyssey /enroll");
+    else if (code == -403) screen("ACCESS DENIED", "Banned", "This World ID is", "banned by consensus");
+    else screen("UPLOAD FAILED", "Not sent", detail, "Touch to retry");
   }
-  delay(1500);
+  delay(2000);  // keep the result readable
 }
 
-// ==================== 5. SETUP & LOOP ====================
-bool started = false;  // the boot screen shows the address until the first touch
+// ==================== 5. WI-FI ====================
+bool connectWifi(const char* ssid, const char* pass) {
+  char name[22];
+  snprintf(name, sizeof name, "%s", ssid);
+  screen("WI-FI", "Joining", name, "");
+  Serial.printf("Wi-Fi: trying \"%s\"\n", ssid);
+  WiFi.disconnect();
+  delay(100);
+  WiFi.begin(ssid, pass);
+  for (int i = 0; i < 25 && WiFi.status() != WL_CONNECTED; i++) delay(400);  // ~10 s
+  bool ok = WiFi.status() == WL_CONNECTED;
+  Serial.println(ok ? "Wi-Fi: connected" : "Wi-Fi: failed");
+  return ok;
+}
+
+// Blocks until a line arrives over Serial. Strips the line ending only, so spaces in passwords survive.
+String readSerialLine(const char* prompt) {
+  Serial.print(prompt);
+  while (!Serial.available()) delay(10);
+  String s = Serial.readStringUntil('\n');
+  if (s.endsWith("\r")) s.remove(s.length() - 1);
+  return s;
+}
+
+void setupWifi() {
+  WiFi.mode(WIFI_STA);
+  for (auto& net : WIFI_NETWORKS) {
+    if (connectWifi(net[0], net[1])) return;
+  }
+  // No known network: ask over the UART bridge until one connects.
+  while (true) {
+    screen("WI-FI SETUP", "No Wi-Fi", "Open Serial 115200", "Enter SSID+password");
+    Serial.println("\nNo known Wi-Fi found. Type the network below (Serial Monitor: 115200 baud, line ending Newline).");
+    String ssid = readSerialLine("SSID: ");
+    Serial.println(ssid);
+    String pass = readSerialLine("Password: ");
+    Serial.println("********");
+    if (connectWifi(ssid.c_str(), pass.c_str())) return;
+    Serial.println("Could not connect. Check the name and password and try again.");
+  }
+}
+
+// ==================== 6. SETUP & LOOP ====================
+String mac;
 
 void setup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);  // disable brownout resets
   Serial.begin(115200);
-  pinMode(TRIGGER_PIN, INPUT_PULLUP);
+  pinMode(TRIGGER_PIN, INPUT_PULLUP);  // HIGH at rest; touching IO13 to GND (e.g. the metal shield) pulls it LOW
 
   I2Cbus.begin(I2C_SDA, I2C_SCL, 100000);
   display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS, true, false);
-  showLines("Odsy Glasses", "Connecting WiFi...");
+  screen("ODYSSEY", "Welcome", "Proof of reality", "Connecting Wi-Fi...");
 
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
-  for (int i = 0; i < 25 && WiFi.status() != WL_CONNECTED; i++) delay(400);
+  setupWifi();  // returns only once connected
   configTime(0, 0, "pool.ntp.org", "time.google.com");  // capturedAt is signed unix time
+  screen("ODYSSEY", "Welcome", "Wi-Fi connected", "Syncing clock...");
+  for (int i = 0; i < 20 && time(nullptr) < 1700000000; i++) delay(500);
 
+  screen("ODYSSEY", "Welcome", "Loading device key...", "");
   initDeviceKey();
-  String mac = WiFi.macAddress();
+  mac = WiFi.macAddress();
   Serial.printf("Device address: %s\nWi-Fi MAC:      %s\n", deviceAddress, mac.c_str());
 
   camera_config_t config;
@@ -227,35 +288,59 @@ void setup() {
     halt(msg);
   }
 
-  // Address split over two lines (21 chars each) so it can be typed into /enroll.
-  char a1[22], a2[22];
+  showDeviceId();
+  delay(15000);  // time to copy the address and MAC into /enroll (also printed on Serial)
+}
+
+// The address split over two lines (21 chars each) so it can be typed into /enroll.
+void showDeviceId() {
+  char a1[22], a2[22], m[22];
   memcpy(a1, deviceAddress, 21); a1[21] = 0;
   memcpy(a2, deviceAddress + 21, 21); a2[21] = 0;
-  showLines(a1, a2, mac.c_str(), WiFi.status() == WL_CONNECTED ? "Touch to start" : "WiFi offline!");
+  snprintf(m, sizeof m, "MAC %s", mac.c_str());
+  display.clearDisplay();
+  display.fillRect(0, 0, SCREEN_WIDTH, 11, SSD1306_WHITE);
+  display.setTextColor(SSD1306_BLACK);
+  centered("DEVICE ID", 2);
+  display.setTextColor(SSD1306_WHITE);
+  centered(a1, 16);
+  centered(a2, 26);
+  centered(m, 40);
+  centered("Enroll at /enroll", 54);
+  display.display();
 }
 
 void loop() {
-  int btn = digitalRead(TRIGGER_PIN);
-  static int lastBtn = HIGH;
-  bool pressed = btn == LOW && lastBtn == HIGH;
-  lastBtn = btn;
-
-  if (!started) {
-    if (pressed) started = true;
-    delay(20);
+  camera_fb_t* fb = esp_camera_fb_get();
+  if (!fb) {
+    Serial.println("camera: no frame");
+    delay(100);
     return;
   }
 
-  camera_fb_t* fb = esp_camera_fb_get();
-  if (!fb) return;
+  // Grounding IO13 fires once; it re-arms after the pin has been back HIGH for 100 ms,
+  // so a wire bouncing on the metal shield does not fire twice.
+  static bool armed = true;
+  static int lastBtn = HIGH;
+  static unsigned long highSince = 0;
+  int btn = digitalRead(TRIGGER_PIN);
+  if (btn != lastBtn) Serial.printf("IO13 -> %d\n", btn);
+  lastBtn = btn;
+  if (btn == HIGH) {
+    if (!highSince) highSince = millis();
+    if (millis() - highSince >= 100) armed = true;
+  } else {
+    highSince = 0;
+  }
 
-  if (pressed) {
+  if (btn == LOW && armed) {
+    armed = false;
     captureAndSend(fb);
     esp_camera_fb_return(fb);
     return;
   }
 
-  // Live viewfinder on the OLED
+  // Live viewfinder with a status bar on top and the hint at the bottom
   display.clearDisplay();
   for (int y = 0; y < 64; y++) {
     int row = (y * 120 / 64) * 160;
@@ -263,9 +348,15 @@ void loop() {
       if (fb->buf[row + x * 160 / 128] > THRESHOLD) display.drawPixel(x, y, SSD1306_WHITE);
     }
   }
-  display.fillRect(0, 0, 48, 9, SSD1306_BLACK);
-  display.setCursor(1, 1);
-  display.printf("BTN:%d", btn);
-  display.display();
   esp_camera_fb_return(fb);
+  display.fillRect(0, 0, SCREEN_WIDTH, 10, SSD1306_BLACK);
+  display.fillRect(0, 54, SCREEN_WIDTH, 10, SSD1306_BLACK);
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(1, 1);
+  display.print("ODYSSEY");
+  display.setCursor(SCREEN_WIDTH - 6 * 7 - 1, 1);
+  display.print(WiFi.status() == WL_CONNECTED ? "  READY" : "NO WIFI");
+  centered(btn == LOW ? "Release to re-arm" : "Touch to send image", 55);
+  display.display();
 }
