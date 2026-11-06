@@ -1,7 +1,8 @@
 "use client";
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useDark } from "@/lib/theme";
+import { playIntroJingle } from "@/components/introJingle";
 
 const IntroScene = dynamic(() => import("@/components/lab/IntroScene"), { ssr: false });
 const noop = () => () => {};
@@ -13,6 +14,17 @@ export default function ProductIntro() {
   // the inline script in the layout sets this before paint for repeat visits and reduced motion
   const off = useSyncExternalStore(noop, () => document.documentElement.dataset.intro === "off", () => false);
   const dark = useDark();
+
+  // jingle: plays only if the browser allows sound without a click; stops when the loader is gone
+  const stopJingle = useRef<() => void>(undefined);
+  useEffect(() => {
+    if (off) return;
+    stopJingle.current = playIntroJingle();
+    return () => stopJingle.current?.();
+  }, [off]);
+  useEffect(() => {
+    if (phase === "gone") stopJingle.current?.();
+  }, [phase]);
 
   useEffect(() => {
     if (off) return;
