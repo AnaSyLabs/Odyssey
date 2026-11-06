@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense } from "react";
-import { LuBookOpen, LuBox, LuChartNoAxesColumn, LuCircuitBoard, LuDatabase, LuGlasses, LuHexagon, LuLayers, LuMapPinned, LuMoon, LuPlugZap, LuReceipt, LuSun } from "react-icons/lu";
+import { LuBookOpen, LuBox, LuChartNoAxesColumn, LuCircuitBoard, LuDatabase, LuGlasses, LuHexagon, LuLayers, LuMapPinned, LuMoon, LuPlugZap, LuReceipt, LuShieldCheck, LuSun } from "react-icons/lu";
 import Logo from "@/components/Logo";
 import SignInGate from "@/components/SignInGate";
 import { WalletButton, WalletProvider } from "@/components/wallet";
@@ -12,6 +12,7 @@ const NAV = [
   ["/datasets", "Datasets", LuDatabase],
   ["/explore", "Explore samples", LuMapPinned],
   ["/activity", "Transactions", LuReceipt],
+  ["/admin", "Admins", LuShieldCheck],
   ["/device", "Capture device", LuBox],
   ["/wiring", "Wiring & firmware", LuCircuitBoard],
   ["/docs", "Protocol docs", LuBookOpen],
@@ -23,7 +24,7 @@ const NAV = [
   ["/mockups", "Mockups", LuLayers],
 ] as const;
 // Pages backed by the gateway; everything else (landing, docs, device, wiring, /mockups) stays open.
-const LIVE = ["/datasets", "/explore", "/activity"];
+const LIVE = ["/datasets", "/explore", "/activity", "/admin"];
 
 // The dataset map route has a request-time param, so the shell reads usePathname() inside Suspense (Cache Components).
 export default function AppLayout({ children }: { children: React.ReactNode }) {
