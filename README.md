@@ -200,7 +200,7 @@ npm install
 npm run dev   # http://localhost:3000
 ```
 
-**Odi**, the little camera bot in the bottom-right corner, is the app's guide: its lens eye follows your pointer and a click opens quick links to the docs, datasets, enrollment, wiring and this repo. It stays still when the system asks for reduced motion.
+**Odi**, the round robot in the bottom-right corner, is the app's guide: its glowing eyes follow your pointer and a click opens quick links to the docs, datasets, enrollment, wiring and this repo. It stays still when the system asks for reduced motion.
 
 ### Lighthouse
 
