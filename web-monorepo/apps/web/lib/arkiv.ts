@@ -1,11 +1,11 @@
 import "server-only";
 import { timingSafeEqual } from "node:crypto";
-import { createPublicClient, createWalletClient } from "@arkiv-network/sdk";
+import { createPublicClient, createWalletClient, ExpirationTime } from "@arkiv-network/sdk";
 import { rabdi } from "@arkiv-network/sdk/chains";
 import { eq } from "@arkiv-network/sdk/query";
 import { addr } from "@arkiv-network/sdk/schema";
 import { Devices } from "@/lib/schema";
-import { http, isHex } from "viem";
+import { getAddress, http, isAddress, isHex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
 export { Devices, Samples } from "@/lib/schema";
@@ -38,11 +38,41 @@ export const gatewayAddress = () => arkivWallet().account.address;
 
 export async function findDevice(device: `0x${string}`) {
   const { entities } = await arkivPublic()
-    .select({ $key: true, worldId: true, deviceType: true, mac: true })
+    .select({ $key: true, worldId: true, deviceType: true, mac: true, payout: true })
     .from(Devices)
     .where(eq("device", addr(device)))
     .ownedBy(gatewayAddress())
     .limit(1)
     .fetch();
   return entities[0];
+}
+
+const fail = (status: number, error: string) => Response.json({ error }, { status });
+
+/**
+ * Binds a device key to a World ID nullifier, one device per human. Callers must have verified the World ID proof.
+ * Body: { device: 0x address, worldId: nullifier hash, deviceType, mac, payout?: owner's wallet for rewards }
+ */
+export async function registerDevice(b: Record<string, string> | null) {
+  if (!b || !isAddress(b.device)) return fail(400, "device must be an address");
+  if (!/^0x[0-9a-fA-F]{1,64}$/.test(b.worldId ?? "")) return fail(400, "worldId must be a hex nullifier hash");
+  if (!/^[\w.-]{1,64}$/.test(b.deviceType ?? "")) return fail(400, "deviceType: 1-64 chars of [A-Za-z0-9_.-]");
+  if (!/^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$/.test(b.mac ?? "")) return fail(400, "mac must look like AA:BB:CC:DD:EE:FF");
+  if (b.payout !== undefined && !isAddress(b.payout)) return fail(400, "payout must be an address");
+
+  const device = getAddress(b.device);
+  const worldId = b.worldId.toLowerCase();
+  if (await findDevice(device)) return fail(409, "device already registered");
+  // One human, one device (README: Sybil resistance).
+  const { entities } = await arkivPublic()
+    .select({ $key: true }).from(Devices).where(eq("worldId", worldId)).ownedBy(gatewayAddress()).limit(1).fetch();
+  if (entities.length) return fail(409, "this World ID already has a device");
+
+  // shortcut: check-then-create races under concurrent registrations; fine at registration volume.
+  const { entityKey, txHash } = await arkivWallet().createEntity(
+    Devices,
+    { device: addr(device), worldId, deviceType: b.deviceType, mac: b.mac.toUpperCase(), ...(b.payout && { payout: addr(getAddress(b.payout)) }) },
+    { expiration: ExpirationTime.max() },
+  );
+  return Response.json({ entityKey, txHash, device, worldId }, { status: 201 });
 }

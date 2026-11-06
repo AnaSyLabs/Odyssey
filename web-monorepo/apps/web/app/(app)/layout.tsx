@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense } from "react";
-import { LuBookOpen, LuBox, LuChartNoAxesColumn, LuCircuitBoard, LuDatabase, LuGlasses, LuHexagon, LuLayers, LuMapPinned, LuMoon, LuPlugZap, LuReceipt, LuShieldCheck, LuSun, LuVideo } from "react-icons/lu";
+import { LuBookOpen, LuBox, LuCamera, LuChartNoAxesColumn, LuCircuitBoard, LuDatabase, LuGlasses, LuHexagon, LuLayers, LuMapPinned, LuMoon, LuPlugZap, LuReceipt, LuShieldCheck, LuSun } from "react-icons/lu";
 import Logo from "@/components/Logo";
 import SignInGate from "@/components/SignInGate";
 import { WalletButton, WalletProvider } from "@/components/wallet";
@@ -14,7 +14,7 @@ const NAV = [
   ["/activity", "Transactions", LuReceipt],
   ["/device", "Capture device", LuBox],
   ["/enroll", "Enroll device", LuShieldCheck],
-  ["/capture", "Live capture", LuVideo],
+  ["/capture", "Captures", LuCamera],
   ["/wiring", "Wiring & firmware", LuCircuitBoard],
   ["/docs", "Protocol docs", LuBookOpen],
   // Mockups: demo-data screens, kept for design until their backends exist.
@@ -25,7 +25,7 @@ const NAV = [
   ["/mockups", "Mockups", LuLayers],
 ] as const;
 // Pages backed by the gateway; everything else (landing, docs, device, wiring, /mockups) stays open.
-const LIVE = ["/datasets", "/explore", "/activity"];
+const LIVE = ["/datasets", "/explore", "/activity", "/enroll", "/capture"];
 
 // The dataset map route has a request-time param, so the shell reads usePathname() inside Suspense (Cache Components).
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -67,7 +67,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               <Link role="tab" aria-selected={path === "/device"} href="/device" className={path === "/device" ? "on" : ""}>3D Model</Link>
               <Link role="tab" aria-selected={path === "/wiring"} href="/wiring" className={path === "/wiring" ? "on" : ""}>Schematics</Link>
               <Link role="tab" aria-selected={path === "/enroll"} href="/enroll" className={path === "/enroll" ? "on" : ""}>Enroll</Link>
-              <Link role="tab" aria-selected={path === "/capture"} href="/capture" className={path === "/capture" ? "on" : ""}>Live Capture</Link>
+              <Link role="tab" aria-selected={path === "/capture"} href="/capture" className={path === "/capture" ? "on" : ""}>Captures</Link>
             </div>
           ) : (
             <span className="flex items-center gap-2">

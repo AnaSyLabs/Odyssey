@@ -1,40 +1,33 @@
-import { ExpirationTime } from "@arkiv-network/sdk";
-import { eq } from "@arkiv-network/sdk/query";
+import { desc, eq } from "@arkiv-network/sdk/query";
 import { addr } from "@arkiv-network/sdk/schema";
 import { getAddress, isAddress } from "viem";
-import { arkivPublic, arkivWallet, Devices, findDevice, gatewayAddress, hasBearer } from "@/lib/arkiv";
+import { arkivPublic, arkivWallet, Devices, findDevice, gatewayAddress, hasBearer, registerDevice, Samples } from "@/lib/arkiv";
 
 const fail = (status: number, error: string) => Response.json({ error }, { status });
 
+/** Public registry entry and newest samples of one device: GET /api/devices?device=0x.. */
+export async function GET(req: Request) {
+  const d = new URL(req.url).searchParams.get("device") ?? "";
+  if (!isAddress(d)) return fail(400, "device must be an address");
+  const device = getAddress(d);
+  const reg = await findDevice(device);
+  if (!reg) return fail(404, "device not registered");
+  const { entities } = await arkivPublic()
+    .select({ $key: true, kind: true, capturedAt: true, contentHash: true, size: true })
+    .from(Samples).where(eq("device", addr(device))).ownedBy(gatewayAddress()).orderBy(desc("capturedAt")).limit(12).fetch();
+  return Response.json({
+    device, worldId: reg.worldId.value, deviceType: reg.deviceType.value, mac: reg.mac.value, payout: reg.payout?.value,
+    samples: entities.map((s) => ({ key: s.$key, kind: s.kind.value, capturedAt: Number(s.capturedAt.value), contentHash: s.contentHash.value, size: Number(s.size.value) })),
+  });
+}
+
 /**
- * Binds a device key to a World ID nullifier. Called by the World ID registration page
- * after it has verified the proof server-side; this route trusts that caller via REGISTRAR_TOKEN.
- * Body: { device: 0x address, worldId: nullifier hash, deviceType, mac, payout?: owner's wallet for rewards }
+ * Registers a device for a trusted external registrar (REGISTRAR_TOKEN) that verified World ID itself.
+ * The app's own flow is POST /api/enroll. Body: see registerDevice.
  */
 export async function POST(req: Request) {
   if (!hasBearer(req, "REGISTRAR_TOKEN")) return fail(401, "unauthorized");
-  const b = await req.json().catch(() => null);
-  if (!b || !isAddress(b.device)) return fail(400, "device must be an address");
-  if (!/^0x[0-9a-fA-F]{1,64}$/.test(b.worldId ?? "")) return fail(400, "worldId must be a hex nullifier hash");
-  if (!/^[\w.-]{1,64}$/.test(b.deviceType ?? "")) return fail(400, "deviceType: 1-64 chars of [A-Za-z0-9_.-]");
-  if (!/^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$/.test(b.mac ?? "")) return fail(400, "mac must look like AA:BB:CC:DD:EE:FF");
-  if (b.payout !== undefined && !isAddress(b.payout)) return fail(400, "payout must be an address");
-
-  const device = getAddress(b.device);
-  const worldId: string = b.worldId.toLowerCase();
-  if (await findDevice(device)) return fail(409, "device already registered");
-  // One human, one device (README: Sybil resistance).
-  const { entities } = await arkivPublic()
-    .select({ $key: true }).from(Devices).where(eq("worldId", worldId)).ownedBy(gatewayAddress()).limit(1).fetch();
-  if (entities.length) return fail(409, "this World ID already has a device");
-
-  // shortcut: check-then-create races under concurrent registrations; fine at registration volume.
-  const { entityKey, txHash } = await arkivWallet().createEntity(
-    Devices,
-    { device: addr(device), worldId, deviceType: b.deviceType, mac: b.mac.toUpperCase(), ...(b.payout && { payout: addr(getAddress(b.payout)) }) },
-    { expiration: ExpirationTime.max() },
-  );
-  return Response.json({ entityKey, txHash }, { status: 201 });
+  return registerDevice(await req.json().catch(() => null));
 }
 
 /**
