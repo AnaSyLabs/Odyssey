@@ -41,6 +41,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ key: st
     sensorsHash,
     storage: s.storage.value,
     ogRoot: s.ogRoot?.value,
+    scene: s.scene?.value,
     size: Number(s.size.value),
     encrypted: !!enc,
     signature: s.signature.value,
