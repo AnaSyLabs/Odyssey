@@ -1,0 +1,34 @@
+[
+ {
+  "n": 1,
+  "text": "AI is running out of internet. The next wave of models, especially robots, needs real first-person data: what a person actually sees and hears. Right now that data is either scraped without consent or locked inside a few big labs. Labs can't tell real data from synthetic fakes, and the people who capture it never get paid. This is Odyssey."
+ },
+ {
+  "n": 2,
+  "text": "These are our capture glasses: an E S P thirty-two camera, a microphone and a small transparent display, with a private key that never leaves the device. When you capture, the glasses hash the clip and sign it right at the sensor, before it ever touches a server. Our gateway checks the signature, encrypts the payload, and stores it."
+ },
+ {
+  "n": 3,
+  "text": "The easiest way to cheat a data network is to run a thousand fake devices, so every pair of glasses is tied to one real person. You enter the glasses' address and prove you're human with World I D. It reveals nothing about who you are, and the proof is bound to that exact device address, so it can't be reused. One human, one device. This screen is a demo; the live page runs the same two steps."
+ },
+ {
+  "n": 4,
+  "text": "Every sample carries its own proof: which device took it, when and where, a content hash and the device's signature. And this one is real: a photo our glasses uploaded today, stored as an entity on Archive. Anyone can see the device address, the World I D that captured it, the location and the signature. The photo itself is encrypted, so only someone who paid can read it. Proof is public; data stays private."
+ },
+ {
+  "n": 5,
+  "text": "Now the buyer's side. An AI lab picks an area and a kind of data, and subscribes for thirty days, paid in zero G. Once subscribed, it gets a live map of every hexagon its data covers and how validators scored each one. Payments go through our subscriptions contract on zero G Galileo; here it is, with a real subscription payment on-chain. Seventy percent of every payment is set aside for the people who captured the data, and only the rest goes to the platform."
+ },
+ {
+  "n": 6,
+  "text": "Labs don't even have to download anything to explore. Our hosted M C P server lets Claude, Cursor or any M C P client search the data a wallet has paid for, with three tools: list datasets, search samples, get a sample."
+ },
+ {
+  "n": 7,
+  "text": "Checking every sample doesn't scale, so validators spot-check a small share, and only objective evidence counts. If someone re-uploads another person's clip, that's provable: a strike. Two strikes and that World I D is banned: no uploads, no new devices, and their data can't be decrypted. Bans live on our consensus contract on zero G, here with the validator votes and the bans we tested."
+ },
+ {
+  "n": 8,
+  "text": "Contributors see what they earned each reward epoch and claim it straight from the contract with a Merkle proof. Odyssey: real-world data, signed at the sensor, owned by the people who capture it. Everything you saw is open source, with links below."
+ }
+]

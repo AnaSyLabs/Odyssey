@@ -4,20 +4,13 @@ import Link from "next/link";
 import { useState } from "react";
 import { LuArrowRight, LuBanknote, LuBot, LuCloudUpload, LuCpu, LuDatabase, LuFilter, LuGlasses, LuLink, LuMoon, LuScale, LuShieldCheck, LuSun, LuUserCheck } from "react-icons/lu";
 import Logo from "@/components/Logo";
-import { STATS } from "@/lib/data";
+import Testimonials from "@/components/Testimonials";
 import { setDark, useDark } from "@/lib/theme";
 
 const Glasses3D = dynamic(() => import("@/components/lab/Glasses3D"), {
   ssr: false,
   loading: () => <div className="grid h-full place-items-center text-sm text-[var(--st-on-var)]">Loading 3D model…</div>,
 });
-
-const FIGURES = [
-  [STATS.hours.toLocaleString(), "h", "Verified first-person data"],
-  [STATS.devices.toLocaleString(), "", "Capture devices"],
-  [String(Math.round(STATS.verifiedShare * 100)), "%", "Samples pass validation"],
-  ["1", "tx", "Per batch, any size"],
-];
 
 const PIPELINE = [
   [LuGlasses, "Capture", "device"],
@@ -42,7 +35,7 @@ const ROLES = [
   [LuBot, "AI labs", "License datasets with a provenance proof per sample and consent that travels with the data."],
 ] as const;
 
-const VIEWS = ["Interactive", "Exploded", "Wireframe"] as const;
+const VIEWS = ["Interactive", "Exploded", "Lineup", "Wireframe"] as const;
 
 export default function Landing() {
   const dark = useDark();
@@ -81,21 +74,12 @@ export default function Landing() {
             <div className="stage-grid pointer-events-none absolute inset-0" />
             <div className="pointer-events-none absolute -top-24 left-1/4 size-96 rounded-full bg-[var(--st-cyan)] opacity-[0.08] blur-3xl" />
             <div className="absolute inset-0">
-              <Glasses3D lesson={1} hudState="capturing" prompt="clip 10 s · gaze on" dark={dark} exploded={view === "Exploded"} wireframe={view === "Wireframe"} />
+              <Glasses3D lesson={1} hudState="capturing" prompt="clip 10 s · gaze on" dark={dark} exploded={view === "Exploded"} lineup={view === "Lineup"} wireframe={view === "Wireframe"} />
             </div>
             <div className="seg pod absolute left-4 top-4" role="group" aria-label="Model view">
               {VIEWS.map((v) => <button key={v} className={view === v ? "on" : ""} aria-pressed={view === v} onClick={() => setView(v)}>{v}</button>)}
             </div>
           </div>
-        </section>
-
-        <section className="glass mt-8 grid grid-cols-2 divide-[var(--st-line,rgba(128,128,128,.2))] py-2 text-center max-lg:[&>*:nth-child(n+3)]:border-t lg:grid-cols-4 lg:divide-x" aria-label="Key figures">
-          {FIGURES.map(([v, u, k]) => (
-            <div key={k} className="border-[var(--st-line,rgba(128,128,128,.2))] px-4 py-8">
-              <p className="text-4xl font-semibold tabular-nums tracking-tight">{v}<span className="ml-1 text-xl text-[var(--st-lime)]">{u}</span></p>
-              <p className="eyebrow mt-2">{k}</p>
-            </div>
-          ))}
         </section>
 
         <section className="glass relative mb-16 mt-8 overflow-hidden p-8" aria-labelledby="pipeline">
@@ -145,6 +129,12 @@ export default function Landing() {
               </div>
             ))}
           </div>
+        </section>
+
+        <section className="pb-20" aria-labelledby="testimonials">
+          <h2 id="testimonials" className="text-center text-3xl font-semibold tracking-tight">Voices from the network.</h2>
+          <div className="mt-8"><Testimonials /></div>
+          <p className="mt-2 text-center"><Link href="/testimonials" className="btn">All testimonials <LuArrowRight size={16} /></Link></p>
         </section>
       </main>
 

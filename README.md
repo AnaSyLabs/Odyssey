@@ -23,7 +23,7 @@ Odsy turns every pair of glasses, every sensor and every phone into a **paid, ve
 | One person can run 1,000 fake devices | One human, one device: linked with World ID (Proof of Human) |
 | Datasets get edited, poisoned or relabelled after the fact | Batch Merkle roots on-chain: any change breaks the proof |
 | Checking every sample doesn't scale | Optimistic acceptance plus random, staked spot-checks of 1 to 5 % |
-| Contributors give data away for free | Gasless, batched payouts to every contributor |
+| Contributors give data away for free | Batched payouts: one Merkle root per epoch, each contributor claims with a proof |
 | Immutable storage vs privacy law | Encrypted per batch; destroy the key to forget the data (crypto-shredding) |
 
 ---
@@ -43,8 +43,8 @@ Encrypted batches go to 0G Storage. One Merkle root per batch goes on-chain, so 
 Each batch opens a challenge window. A VRF-picked committee of staked validators scores a small random sample (commit-reveal, so nobody copies votes). Hidden honeypots grade the validators. Anyone can challenge with a bond.
 
 **5. Pay: one root, many claims.**
-Each epoch publishes a rewards Merkle root. Contributors claim gaslessly.
-`reward = base × quality score × rarity`
+Each epoch publishes a rewards Merkle root. Contributors claim with a proof.
+`reward = base × quality score × rarity` is the design. Today the split is pro rata by sample count (see *Where the money goes*).
 
 ---
 
@@ -89,6 +89,8 @@ Slashing only happens on **objective evidence** (bad signature, duplicate, faile
 
 How the project maps to the sponsor tracks it targets. Each row says what is built, where it lives, and how to see it. Honest status is in the last column.
 
+For a walk through one track at a time, with diagrams and a demo path for each, see [docs/TRACKS.md](docs/TRACKS.md).
+
 ### Arkiv: the data layer
 
 | What we built | Where | Status |
@@ -114,11 +116,11 @@ See it: TESTING.md parts 2 and 3. Both contracts are linked under *Deployed cont
 
 | What we built | Where | Status |
 |---|---|---|
-| A device key is bound to a World ID nullifier, one device per human | `app/api/devices`, `Devices` schema | Built. The proof itself is checked by a separate registration page, not here |
+| A device key is bound to a World ID nullifier, one device per human. The proof's signal is the device address, so one human's proof cannot enroll another device | `app/api/enroll`, `lib/arkiv.ts` (`registerDevice`), `Devices` schema | Built (World ID v4, RP-signed request, verified against the developer portal). Not yet live-tested by us |
 | Every sample carries the World ID that captured it | `Samples.worldId` | Live |
 | Two provable strikes ban a World ID: no uploads, no new device, data from its first strike unreadable | `ConsensusRegistry`, `lib/consensus.ts`, `lib/access.ts` | Built, contract run live, gateway path not yet end to end |
 
-Not built: the World ID proof verification (`POST /api/devices` trusts the registration page through `REGISTRAR_TOKEN`). `/mockups/enroll` is a demo of the flow, not a real registration.
+Enrollment is `/enroll`: sign in with a wallet, enter the glasses' address and MAC, approve in World App (or `simulator.worldcoin.org` with a staging app). The signed-in wallet becomes the device's payout address. `POST /api/devices` remains for an external registrar that verifies World ID itself (`REGISTRAR_TOKEN`). `/mockups/enroll` is only a demo of the flow. Setup: create an app and a `register-device` action at developer.world.org and set `WORLD_APP_ID`, `WORLD_RP_ID` and `WORLD_RP_SIGNING_KEY`, plus `WORLD_ENVIRONMENT=staging` to test with the simulator. Design notes: [docs/odsy_provenance_network.md](docs/odsy_provenance_network.md).
 
 ## Deployed contracts
 
@@ -131,6 +133,39 @@ Both on 0G Galileo Testnet (chain ID 16602), deployed by the same testnet wallet
 
 `SUBSCRIPTIONS_ADDRESS` and `SUBSCRIPTIONS_FROM_BLOCK` are required by the gateway for any signed-in request. Without them `/api/datasets`, `/api/samples`, `/api/subscriptions` and `/api/rewards` return 500 with `Missing env SUBSCRIPTIONS_ADDRESS`.
 
+## Where the money goes
+
+Labs pay for datasets in 0G on Galileo. The contract splits every payment on the spot, and contributors collect their share by epoch.
+
+```mermaid
+flowchart LR
+  Lab["Lab wallet"] -->|"exact price, e.g. 0.01 0G"| Sub["subscribe()<br/>OdsySubscriptions"]
+  Sub -->|"70 %"| Pool["Contributor pool<br/>(unallocated)"]
+  Sub -->|"30 %"| Treasury["Treasury"]
+  Pool -->|"epoch: Merkle root,<br/>pro rata by samples"| Epoch["Reward epoch"]
+  Epoch -->|"claim(proof)"| Payout["Payout wallets"]
+  Treasury -->|"withdrawTreasury()"| Owner["Owner"]
+  Pool -. "no payout wallet,<br/>rounding dust" .-> Pool
+```
+
+**Worked example.** A lab pays **0.01 0G** for a dataset. The contract sets **0.007** aside for contributors and **0.003** for the treasury. The dataset holds samples from three devices: A has 60, B has 30, C has 10 and no payout wallet. When the owner publishes the epoch, A's wallet gets 0.0042, B's gets 0.0021, and C's 0.0007 stays in the pool for a later epoch.
+
+| Step | Who | Money moves |
+|---|---|---|
+| Subscribe | Lab | Pays exactly the dataset price plus gas. Access lasts 30 days; renewals stack, up to 150 days prepaid |
+| Split | Contract | `contributorBps` (7000 = 70 %) to the contributor pool, the rest to the treasury. The owner can change it, never below 50 %, for future payments only |
+| Publish an epoch | Owner (`npm run rewards:publish`) | Splits the pool across payout wallets pro rata by each device's sample count, publishes one Merkle root. The contract refuses a total above the pool |
+| Claim | Payout wallet, or anyone on its behalf | `claim(epoch, account, amount, proof)` pays the account. The claimer pays gas, and a root can never pay out more than its published total |
+| Withdraw | Owner | `withdrawTreasury(to)` moves the treasury balance only, never contributor funds |
+
+**What is not paid from this flow**
+- **Gas** is paid by whoever sends the transaction: the lab to subscribe, the owner to set prices, publish epochs and withdraw, the claimer to claim.
+- **Storage** is not paid from revenue. The gateway wallet pays Arkiv gas (tGLM) for every sample, registration and extension, and 0G Storage fees for large payloads, out of its own funds.
+- **Validators are not paid yet.** The consensus contract has no rewards or staking, and its tile verdicts do not gate payouts. Rewards today follow subscriptions only.
+- **Unclaimed money** stays in the contract: shares of devices without a payout wallet and rounding dust remain in the pool for a later epoch.
+
+Code: `contracts/src/OdsySubscriptions.sol`, `lib/rewards.ts`, `scripts/publish-rewards.ts`.
+
 ## The web app
 
 A Next.js app and gateway in `web-monorepo/apps/web`. Live pages talk to Arkiv and 0G Galileo and ask for a wallet sign-in. Everything under `/mockups` runs on demo data and needs no sign-in.
@@ -141,12 +176,16 @@ A Next.js app and gateway in `web-monorepo/apps/web`. Live pages talk to Arkiv a
 | `/datasets`, `/datasets/{key}` | Dataset marketplace, paid subscriptions, sample hex map | live, wallet sign-in |
 | `/explore` | Search samples by place on a map | live, wallet sign-in |
 | `/activity` | Transactions, payments and contributor rewards | live, wallet sign-in |
+| `/analytics` | Earnings per reward epoch (contributor), spend per month and dataset (lab), revenue split (admins) | live, wallet sign-in |
+| `/enroll` | Enroll glasses to a World ID and a payout wallet | live, wallet sign-in |
+| `/capture` | A device's captures with signature and content-hash checks | live, wallet sign-in |
+| `/admin` | List, grant and revoke admins | live, admin only |
 | `/device` | 3D capture device: interactive, exploded, wireframe | static |
 | `/wiring` | ESP32 wiring and reference firmware, one lesson at a time | static |
 | `/docs` | Protocol docs | static |
 | `/mockups` | Index of the demo screens below | demo |
 | `/mockups/datasets` | Validator-consensus hex map | demo |
-| `/mockups/analytics` | Contributor earnings and company spend | demo |
+| `/mockups/analytics` | The original static design of the analytics screen (fake figures and dollars) | demo |
 | `/mockups/devices` · `/mockups/enroll` | Registered devices and the enrollment flow | demo |
 
 | Wiring & firmware | Datasets (mockup) | Analytics (mockup) |
@@ -163,6 +202,27 @@ npm install
 npm run dev   # http://localhost:3000
 ```
 
+**Odi**, the round robot in the bottom-right corner, is the app's guide: its glowing eyes follow your pointer and a click opens quick links to the docs, datasets, enrollment, wiring and this repo. **Take the tour** in that panel has Odi walk a new visitor through the site, game-tutorial style: the landing page, the glasses, the demo screens under `/mockups`, wallet sign-in, and finally the docs, with a spotlight on each part and a speech bubble explaining it. It stays still when the system asks for reduced motion.
+
+### Lighthouse
+
+| Page | Performance | Accessibility | Best Practices | SEO |
+|---|---|---|---|---|
+| `/` | 100 | 100 | 100 | 100 |
+| `/datasets` | 98 | 100 | 100 | 100 |
+| `/explore` | 98 | 100 | 100 | 100 |
+| `/analytics` | 98 | 100 | 100 | 100 |
+| `/activity` | 98 | 100 | 100 | 100 |
+| `/docs` | 100 | 100 | 100 | 100 |
+| `/device` | 100 | 100 | 100 | 100 |
+| `/wiring` | 100 | 100 | 100 | 100 |
+
+Lighthouse 13.6, desktop preset, local production build (`next build && next start`), signed in, 6 Nov 2026. On the mobile preset the signed-in data pages score lower on Performance (about 77 to 79 on `/datasets` and `/activity`); the other categories stay at 100. To re-run one page:
+
+```bash
+npx lighthouse http://localhost:3000/datasets --preset=desktop --view
+```
+
 ## Directory structure
 
 ```
@@ -172,13 +232,16 @@ npm run dev   # http://localhost:3000
 │                   subscriptions, keys, auth, cron), components (wallet, sign-in gate, skeletons, H3 map),
 │                   lib (arkiv, geo, crypto, sessions, payments, 0G, sample protocol),
 │                   scripts/simulate-device.ts (fake glasses), scripts/lab-ingest.ts (lab-side verified sync)
-├── firmware/      ESP32 glasses: mic, IR camera, IMU, OLED, device signing
+├── firmware/      ESP32 glasses: `odsy_glasses_camera` (camera capture, secp256k1 device key, signed upload) plus mic, IR, IMU and OLED sketches
 ├── contracts/     Foundry: OdsySubscriptions (subscriptions + reward claims) and ConsensusRegistry (tile verdicts, two-strike ban)
-├── docs/          Screenshots used in this README
+├── docs/          Screenshots used in this README and the provenance design note (odsy_provenance_network.md)
+├── video/         Demo video plan: ETHGlobal rules, script, shot list, recording and export steps
 ├── .claude/       Agent skills (Solidity security, OpenZeppelin, token checks)
 ├── .cursor/       Cursor rules (Ponytail)
 ├── AGENTS.md      Rules for AI coding agents
-└── CLAUDE.md      Loads AGENTS.md for Claude Code
+├── CLAUDE.md      Loads AGENTS.md for Claude Code
+├── CONTRIBUTING.md How to set up, test and open a PR
+└── LICENSE        MIT
 ```
 
 ## Arkiv data layer (built)
@@ -314,7 +377,9 @@ Runs are incremental. The cursor is `$expiresAt`: new and extended samples alway
 
 | Endpoint | Auth | Does |
 |---|---|---|
-| `POST /api/devices` | `Bearer REGISTRAR_TOKEN` | Binds `{device, worldId, deviceType, mac, payout}`; `payout` is the owner's wallet and is required. Called by the World ID registration page after it verifies the proof |
+| `GET /api/devices?device=` | Public | A device's registry entry and its newest samples |
+| `GET /api/enroll`, `POST /api/enroll` | Signed in | The enroll page's signed World ID request, then `{device, mac, result}`: verifies the proof (signal = device address), refuses a banned World ID, registers the device with the wallet as payout |
+| `POST /api/devices` | `Bearer REGISTRAR_TOKEN` | For an external registrar that verified World ID itself: binds `{device, worldId, deviceType, mac, payout}`; `payout` is the owner's wallet and is required. `403` for a banned World ID |
 | `PATCH /api/devices` | `Bearer REGISTRAR_TOKEN` | `{device, payout}`: set the wallet that receives a device's rewards |
 | `POST /api/ingest` | Device signature | `{kind, mime, capturedAt, lat, lon, sensors, data (base64), signature}` → `201 {entityKey, txHash, contentHash, storage, ogRoot}`. `403` for an unregistered or banned device |
 | `GET /api/samples?lat=&lon=&radius=&kind=&deviceType=&from=&to=&limit=` or `?dataset=` | Public (metadata) | Samples within `radius` metres (max 50 km) or in a dataset, nearest first. `readable` says whether the viewer can decrypt |
@@ -324,10 +389,12 @@ Runs are incremental. The cursor is `$expiresAt`: new and extended samples alway
 | `GET /api/datasets` | Public | Datasets with sample counts and the viewer's access-until date |
 | `GET /api/admins`, `POST /api/admins`, `DELETE /api/admins?address=` | Admin | List admins (root and granted), make a wallet admin with `{address}`, or remove a granted one |
 | `POST /api/datasets`, `PATCH /api/datasets/{key}` | Admin | Create a dataset and list it on the contract, or list/unlist it with `{active}` |
-| `GET /api/subscriptions` | Signed in | Own payments from the contract's `Subscribed` events plus legacy Arkiv periods (admin: all) |
+| `GET /api/subscriptions` | Signed in | Own payments from the contract's `Subscribed` events (each with its block time, `paidAt`) plus legacy Arkiv periods (admin: all) |
 | `GET /api/rewards` | Signed in | The wallet's reward per epoch with its Merkle proof and claimed state |
 | `POST /api/keys` | Signed in | `{keys: [...]}` → per-sample decryption keys the wallet is entitled to |
-| `GET /api/activity` | Signed in | Recent Arkiv writes with tx hashes (admin: all, from the last ~7 days of logs; lab: own subscriptions) |
+| `GET /api/activity` | Signed in | Recent Arkiv writes with tx hashes (admin: all; lab: own subscriptions). Only the last ~800 blocks (about 25 minutes), because the Arkiv RPC serves logs only for recent blocks |
+| `POST /api/mcp/token` | Signed in | Mint a 7-day bearer token for the MCP server |
+| `POST /api/mcp` | `Bearer` MCP token | MCP server: `list_datasets`, `search_samples`, `get_sample` |
 | `GET /api/config` | Public | Subscriptions contract address and its chain |
 | `GET /api/cron/extend` | `Bearer CRON_SECRET` | Retention job above |
 
@@ -341,14 +408,14 @@ You need:
 - **A 0G testnet wallet with tokens** ([faucet.0g.ai](https://faucet.0g.ai)) as `OG_PRIVATE_KEY`. It deploys and owns the subscriptions contract, and stores payloads over 96 KiB.
 - **Foundry** for the contract: `curl -L https://foundry.paradigm.xyz | bash && foundryup`.
 - **A browser wallet** (MetaMask or similar) with some Galileo test 0G, to sign in and pay. The app adds the Galileo network for you.
-- **New secrets in `.env`:** `DATA_KEY` (`openssl rand -hex 32`, back it up), `SESSION_SECRET` (`openssl rand -hex 32`), `ADMIN_ADDRESSES` (your wallet address), and `SUBSCRIPTIONS_ADDRESS` plus `SUBSCRIPTIONS_FROM_BLOCK` from the deploy below, and optionally `CONSENSUS_ADDRESS` (see *Consensus contract*).
+- **New secrets in `.env`:** `DATA_KEY` (`openssl rand -hex 32`, back it up), `SESSION_SECRET` (`openssl rand -hex 32`), `ADMIN_ADDRESSES` (your wallet address), and `SUBSCRIPTIONS_ADDRESS` plus `SUBSCRIPTIONS_FROM_BLOCK` from the deploy below, optionally `CONSENSUS_ADDRESS` (see *Consensus contract*), and `WORLD_APP_ID`, `WORLD_RP_ID`, `WORLD_RP_SIGNING_KEY` and `WORLD_ENVIRONMENT` (`staging` for the simulator) for `/enroll`.
 
 Deploy the contract once:
 
 ```bash
 cd contracts
 git submodule update --init --recursive     # OpenZeppelin Contracts + forge-std
-forge test                                  # 14 tests, fuzzing included
+forge test                                  # 24 tests (14 subscriptions + 10 consensus), fuzzing included
 forge script script/DeploySubscriptions.s.sol --rpc-url galileo --broadcast --private-key $OG_PRIVATE_KEY
 # put the printed address in SUBSCRIPTIONS_ADDRESS, and the deploy block in SUBSCRIPTIONS_FROM_BLOCK
 ```
@@ -363,8 +430,8 @@ npm run dev                                 # gateway on http://localhost:3000
 npm run simulate -- 3                       # fake glasses: register, upload 3 signed samples from Bandra, query nearby
 npm run simulate -- 1 ./photo.jpg           # an image > 96 KiB goes through 0G
 npm run simulate -- 3 --kind sensor         # weather readings (kind=sensor, application/json)
-npm test                                    # geo, thinning, signature, encryption, session, reward-split tests (no network)
-npm run lab:ingest                          # with the LAB_* vars set: pull your datasets into apps/web/lab-data/
+npm test                                    # geo, thinning, signature, encryption, session, reward-split, MCP and analytics tests (no network)
+npm run lab:ingest                          # with the LAB_* vars set: pull your datasets into apps/web/lab-data/ (or LAB_OUT_DIR)
 npm run rewards:publish -- --dry-run        # preview the next reward epoch; drop --dry-run to publish it
 ```
 
@@ -381,14 +448,64 @@ node -e "import('viem/accounts').then(a=>{const k=a.generatePrivateKey();console
 - **The paywall covers payloads, not metadata.** Location, time, device, MAC and World ID are public on Arkiv by design, because they power the geo index. A subscriber who saves the keys or data keeps them after the subscription ends.
 - **The contract owner is trusted with rewards.** Payments and access are enforced on-chain. The reward split is computed off-chain, though, and the owner key publishes the roots. A wrong root can misdirect up to that epoch's total, but never the treasury or other epochs. There are no refunds. Only externally owned wallets can sign in, not smart-contract wallets.
 - **The contracts aren't audited.** They're tested (24 Foundry tests: 14 for subscriptions, including fuzz and reentrancy cases, and 10 for consensus). Run the repo's `solidity-auditor` skill and an external review before any real money.
-- **Mockups live under `/mockups`** and show demo data only: `/mockups/datasets` (the validator-consensus hex map), `/mockups/analytics`, `/mockups/devices` and `/mockups/enroll`. They are marked "mockup" in the nav and top bar. The live routes are `/datasets`, `/datasets/{key}`, `/explore`, `/activity` and `/api/*`.
+- **Analytics shows what the contracts record, in 0G.** There is no dollar price on a testnet, and no quality score or pass rate, because consensus verdicts do not drive payouts yet. Contributor totals only cover published reward epochs, and payments from before the contract have no timestamp, so they are left out of the charts.
+- **Mockups live under `/mockups`** and show demo data only: `/mockups/datasets` (the validator-consensus hex map), `/mockups/analytics`, `/mockups/devices` and `/mockups/enroll`. They are marked "mockup" in the nav and top bar. The live routes are `/datasets`, `/datasets/{key}`, `/explore`, `/activity`, `/enroll`, `/capture`, `/admin` and `/api/*`.
 - **Explorer links** assume `/tx/<hash>` paths on chainscan-galileo.0g.ai and rabdi.explorer.arkiv.network.
 - **Device keys are only as safe as the device.** Real glasses need the key in a secure element (ATECC608A) or ESP32 flash encryption. A key in plain NVS can be copied.
 - **Location is hard-coded to Bandra, Mumbai**, because there is no GPS yet. Even with GPS, a signed location is only as honest as the device; witness co-signing (see *How it works*) is the planned check.
-- **World ID is not verified here.** `POST /api/devices` trusts the registration page via `REGISTRAR_TOKEN`.
+- **World ID is verified in `/api/enroll`, not in `POST /api/devices`.** The latter trusts its caller through `REGISTRAR_TOKEN`, so keep that token secret or leave it unset. The enroll flow needs `WORLD_APP_ID`, `WORLD_RP_ID` and `WORLD_RP_SIGNING_KEY`, and has not been run live by us.
 - **Privacy.** MAC addresses and World ID nullifiers are public on Arkiv. Images can show bystanders. Before real users: hash or drop the MAC and blur faces at the gateway. Immutable personal data also conflicts with GDPR and DPDP deletion rights. Per-sample keys make crypto-shredding possible, by destroying `DATA_KEY`, but only for all samples at once.
 - **Live-tested so far:** device registration, plaintext and encrypted ingest (text and sensor samples), geo queries, wallet sign-in, dataset creation and the lab ingest job's sign-in and dataset lookup, all against Arkiv Rabdi. Not yet confirmed end to end on live networks: a paid subscription unlocking decryption, lab ingest writing decrypted files, payloads over 96 KiB on 0G, the Transactions log, the retention job, and the subscriptions contract on Galileo (deploy, subscribe, publish and claim rewards).
 - **Scale shortcuts** are marked `shortcut:` in code. The geo scan stops at 2,000 candidates. Duplicate and registration checks can race. The extend job runs in a single request.
+
+## MCP server: query your datasets from an LLM
+
+Subscribers can search and read the data they paid for from Claude, Cursor, ChatGPT's API or any other MCP client, with a bearer token. It is retrieval only: the model you connect does the answering, and it can only see what your wallet has subscribed to.
+
+**Get a token.** Sign in on the Datasets page, open the *Use your datasets in an AI tool* card and click **Create token**. It shows a copy-paste setup for Claude Code, Cursor, Claude Desktop and any other client. The server is hosted, so a new user installs and clones nothing: no local path, no runtime, only a token (Claude Desktop also needs Node.js for the bridge). Tokens last 7 days and are shown once.
+
+**Endpoint:** `POST /api/mcp` (MCP streamable HTTP, stateless, JSON replies), header `Authorization: Bearer <token>`.
+
+| Tool | Does |
+|---|---|
+| `list_datasets` | Your active subscriptions: key, name, area, access end |
+| `search_samples` | Keyword search (BM25) over the text and sensor samples of one dataset, with optional time range. Returns the best matches with a snippet, location, time and content hash |
+| `get_sample` | One sample in full, decrypted, if a subscription covers it |
+
+Connect a client:
+
+```bash
+# Claude Code
+claude mcp add --transport http odyssey https://<your-host>/api/mcp --header "Authorization: Bearer <token>"
+```
+
+No `claude` command installed (for example inside the desktop app)? Use the project file instead. This repo already has a token-free [`.mcp.json`](.mcp.json): export your token, then start Claude Code in the repo and approve the server.
+
+```bash
+export ODYSSEY_TOKEN=<token>
+# optional: point at your own deployment instead of the default
+export ODYSSEY_URL=https://<your-host>
+```
+
+```json
+// Cursor: .cursor/mcp.json
+{ "mcpServers": { "odyssey": { "url": "https://<your-host>/api/mcp", "headers": { "Authorization": "Bearer <token>" } } } }
+```
+
+- **Claude Desktop** only launches local commands, so use the `mcp-remote` bridge (needs Node.js; `npx` fetches it). In `claude_desktop_config.json`:
+
+  ```json
+  { "mcpServers": { "odyssey": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://<your-host>/api/mcp", "--header", "Authorization:${ODYSSEY_AUTH}"],
+      "env": { "ODYSSEY_AUTH": "Bearer <token>" } } } }
+  ```
+- **ChatGPT and the OpenAI API:** the Responses API takes an MCP tool with `server_url` and `headers`. ChatGPT's own connector screen asks for OAuth, which this server does not offer yet.
+- **Anything else:** any MCP client that speaks HTTP and can set a header.
+
+Access is the same check as the web app (`readAccess`): the wallet's active subscriptions, a banned World ID's data excluded, admins see everything. Code: `lib/mcp-core.ts` (tokens, ranking, JSON-RPC), `lib/mcp.ts` (tools), `app/api/mcp`.
+
+**Limits.** Keyword search only, no embeddings, so "car" will not find "vehicle". It ranks the newest 100 text and sensor samples of a dataset per query. Images, audio and video, and payloads stored on 0G, are not returned. Tokens cannot be revoked, only expire (rotating `SESSION_SECRET` kills them all). No rate limiting yet, and no OAuth.
 
 ## Consensus contract
 
@@ -412,7 +529,7 @@ The map is cut into hexagons. For each hexagon and each day (a *tile*) we spot-c
 
 1. Too few clips or devices in the hexagon? It waits.
 2. Otherwise validators check a handful of clips and each says how many passed. The middle answer wins.
-3. If two thirds passed, the tile is accepted and contributors get paid. If not, it is rejected.
+3. If two thirds passed, the tile is accepted. If not, it is rejected. (Payouts are meant to follow accepted tiles, but today they do not: rewards come from subscriptions, see *Where the money goes*.)
 4. **Two strikes:** a device caught with *provable* bad data twice (fake signature, copied clip, failed honeypot, impossible location) gets its World ID banned. Its data from the first strike onward is left out. Being outvoted is never a strike. Admins can lift a ban.
 
 ### How the gateway uses it
@@ -503,6 +620,18 @@ Buy datasets with a **provenance proof per sample**: the device that captured it
 ## For contributors
 
 Wear it, capture your world, get paid. Your data is encrypted, your identity stays private (World ID reveals nothing about who you are), and you can revoke it.
+
+## AI use
+
+We built this with AI coding assistants: Claude Code and Cursor wrote much of the web app, contracts, tests and docs, under the rules in [AGENTS.md](AGENTS.md) and [.cursor/rules](.cursor/rules). The team chose the design, reviewed and tested the changes, and ran the on-chain deployments and live tests. The Solidity audit and OpenZeppelin skills in `.claude/skills/` are third-party and keep their own licenses.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+[MIT](LICENSE). Third-party code keeps its own license: the git submodules under `contracts/lib/` (OpenZeppelin Contracts, forge-std) and each skill under `.claude/skills/` (see its `LICENSE` file).
 
 ---
 

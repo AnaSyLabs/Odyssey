@@ -85,7 +85,7 @@ function Ledger({ admin }: { admin: boolean }) {
       <section className="glass overflow-hidden" aria-label="Payments">
         <p className="eyebrow border-b border-[var(--st-line)] px-4 py-3">Subscription payments · 0G Galileo</p>
         {!payments && !error && <Loading label="Loading payments" className="p-4"><RowsSkeleton rows={2} /></Loading>}
-        {payments?.length === 0 && <p className="p-4 text-sm text-[var(--st-on-var)]">No payments yet. <Link href="/datasets" className="text-[var(--st-cyan)] hover:underline">Browse datasets</Link></p>}
+        {payments?.length === 0 && <p className="p-4 text-sm text-[var(--st-on-var)]">No payments yet. <Link href="/datasets" className="text-[var(--st-cyan)] underline">Browse datasets</Link></p>}
         {!!payments?.length && (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
@@ -137,7 +137,7 @@ function Ledger({ admin }: { admin: boolean }) {
       <section className="glass overflow-hidden" aria-label="Arkiv transactions">
         <p className="eyebrow border-b border-[var(--st-line)] px-4 py-3">Arkiv writes · Rabdi testnet{latest && ` · latest block ${latest}`}</p>
         {!events && !error && <Loading label="Reading Arkiv logs" className="p-4"><RowsSkeleton rows={5} /></Loading>}
-        {events?.length === 0 && <p className="p-4 text-sm text-[var(--st-on-var)]">No writes in the last ~7 days.</p>}
+        {events?.length === 0 && <p className="p-4 text-sm text-[var(--st-on-var)]">No writes in the last ~25 minutes. The Arkiv RPC only serves recent logs.</p>}
         {!!events?.length && (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">

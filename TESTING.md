@@ -33,7 +33,7 @@ openssl rand -hex 16   # REGISTRAR_TOKEN and again for CRON_SECRET
 
 ```bash
 cd contracts && forge test            # expect 24 passed: 14 subscriptions + 10 consensus
-cd ../web-monorepo && npm test        # expect pass 13, fail 0
+cd ../web-monorepo && npm test        # expect pass 22, fail 0
 npm run build                         # compiles, lists /mockups and the live routes
 ```
 
@@ -69,6 +69,19 @@ cd ../web-monorepo && npm run dev       # http://localhost:3000
 - [ ] epoch published and claimed, second claim reverts
 - [ ] over-96 KiB payload round-trips
 - [ ] cron returns a summary
+
+### 2b. World ID enrollment (optional)
+
+Needs a World ID app with a `register-device` action (developer.world.org; use a staging app with simulator.worldcoin.org). Set `WORLD_APP_ID`, `WORLD_RP_ID`, `WORLD_RP_SIGNING_KEY` and `WORLD_ENVIRONMENT=staging`, restart, and sign in.
+
+1. Open `/enroll`, enter the glasses' (or a simulated) device address and MAC.
+2. Approve the request in World App or the simulator.
+3. Expect the device registered with your wallet as payout, visible on `/capture`.
+4. Enroll the same device again: `409 already registered`. Use the same World ID for another device: `409 already has a device`.
+5. After the ban in part 3, a banned World ID gets `403` here too.
+
+- [ ] enrollment registers the device and sets the payout wallet
+- [ ] a proof for a different device address is rejected
 
 ## 3. Consensus contract and the ban
 
@@ -162,6 +175,27 @@ With `npm run dev` running, open each and check it loads without errors:
 - [ ] `/mockups` and its four screens open without sign-in
 - [ ] `/datasets`, `/explore`, `/activity` show the sign-in overlay until a wallet signs in
 - [ ] `/device`, `/wiring`, `/docs` open without sign-in; `/docs` links the deployed contract
+- [ ] `/analytics` shows the sign-in overlay until a wallet signs in, then three views for an admin (Contributor earnings, Lab spend, Platform) and two for everyone else
+- [ ] after a subscription, Lab spend shows the payment with a date and a working tx link, and the Platform view splits it 70 / 30
+- [ ] after publishing and claiming an epoch, Contributor earnings shows it as claimed and the Claimable figure drops to 0
+
+## 5. MCP server
+
+With `npm run dev` running and a wallet signed in:
+
+```bash
+# mint a token from a signed-in browser session cookie, or use the Create token button on /datasets
+T=<token>
+curl -s -X POST localhost:3000/api/mcp -H "authorization: Bearer $T" -H 'content-type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+curl -s -X POST localhost:3000/api/mcp -H "authorization: Bearer $T" -H 'content-type: application/json' \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"search_samples","arguments":{"dataset":"<dataset key>","query":"note"}}}'
+```
+
+- [ ] no token, or a session cookie used as a token, returns `401`
+- [ ] `tools/list` shows `list_datasets`, `search_samples`, `get_sample`
+- [ ] a subscribed lab finds its text samples; a wallet without a subscription gets "no active subscription for that dataset"
+- [ ] `get_sample` returns the decrypted text; a banned World ID's later samples are refused
+- [ ] connect Claude Code (`claude mcp add --transport http ...`) and ask it to list your datasets
 
 ## Troubleshooting
 

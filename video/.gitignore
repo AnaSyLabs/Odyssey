@@ -1,0 +1,22 @@
+# Raw takes and exports are too large for git; the final cut is uploaded and linked from README.md.
+*.mp4
+*.mov
+*.mkv
+*.webm
+*.wav
+*.m4a
+tools/takes/
+tools/parts/
+tools/list.txt
+tools/node_modules/
+tools/package*.json
+tools/zoomed/
+tools/silent-cut.mp4
+tools/__pycache__/
+tools/vo/
+tools/sec/
+tools/final/
+tools/card-*.png
+tools/stretch.json
+tools/*.mp4
+tools/odyssey-demo-*.mp4

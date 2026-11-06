@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense } from "react";
-import { LuBookOpen, LuBox, LuChartNoAxesColumn, LuCircuitBoard, LuDatabase, LuGlasses, LuHexagon, LuLayers, LuMapPinned, LuMoon, LuPlugZap, LuReceipt, LuShieldCheck, LuSun } from "react-icons/lu";
+import { LuBookOpen, LuBox, LuCamera, LuChartNoAxesColumn, LuCircuitBoard, LuDatabase, LuGlasses, LuHexagon, LuLayers, LuMapPinned, LuMoon, LuPlugZap, LuQuote, LuReceipt, LuShieldCheck, LuSun } from "react-icons/lu";
 import Logo from "@/components/Logo";
 import SignInGate from "@/components/SignInGate";
 import { WalletButton, WalletProvider } from "@/components/wallet";
@@ -12,10 +12,14 @@ const NAV = [
   ["/datasets", "Datasets", LuDatabase],
   ["/explore", "Explore samples", LuMapPinned],
   ["/activity", "Transactions", LuReceipt],
+  ["/analytics", "Analytics", LuChartNoAxesColumn],
   ["/admin", "Admins", LuShieldCheck],
   ["/device", "Capture device", LuBox],
+  ["/enroll", "Enroll device", LuShieldCheck],
+  ["/capture", "Captures", LuCamera],
   ["/wiring", "Wiring & firmware", LuCircuitBoard],
   ["/docs", "Protocol docs", LuBookOpen],
+  ["/testimonials", "Testimonials", LuQuote],
   // Mockups: demo-data screens, kept for design until their backends exist.
   ["/mockups/datasets", "Mockup: consensus datasets", LuHexagon],
   ["/mockups/analytics", "Mockup: analytics", LuChartNoAxesColumn],
@@ -24,7 +28,7 @@ const NAV = [
   ["/mockups", "Mockups", LuLayers],
 ] as const;
 // Pages backed by the gateway; everything else (landing, docs, device, wiring, /mockups) stays open.
-const LIVE = ["/datasets", "/explore", "/activity", "/admin"];
+const LIVE = ["/datasets", "/explore", "/activity", "/analytics", "/admin", "/enroll", "/capture"];
 
 // The dataset map route has a request-time param, so the shell reads usePathname() inside Suspense (Cache Components).
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -61,10 +65,12 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex min-h-screen flex-col lg:pl-16">
         <header className="topbar sticky top-0 z-20 flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2">
-          {path === "/device" || path === "/wiring" ? (
+          {path === "/device" || path === "/wiring" || path === "/enroll" || path === "/capture" ? (
             <div className="seg" role="tablist" aria-label="View">
               <Link role="tab" aria-selected={path === "/device"} href="/device" className={path === "/device" ? "on" : ""}>3D Model</Link>
               <Link role="tab" aria-selected={path === "/wiring"} href="/wiring" className={path === "/wiring" ? "on" : ""}>Schematics</Link>
+              <Link role="tab" aria-selected={path === "/enroll"} href="/enroll" className={path === "/enroll" ? "on" : ""}>Enroll</Link>
+              <Link role="tab" aria-selected={path === "/capture"} href="/capture" className={path === "/capture" ? "on" : ""}>Captures</Link>
             </div>
           ) : (
             <span className="flex items-center gap-2">
