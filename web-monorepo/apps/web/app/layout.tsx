@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono, Space_Mono, Urbanist } from "next/font/google";
+import Odi from "@/components/Odi";
 import ProductIntro from "@/components/ProductIntro";
 import "./globals.css";
 
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
         <ProductIntro />
         {children}
+        <Odi />
       </body>
     </html>
   );
