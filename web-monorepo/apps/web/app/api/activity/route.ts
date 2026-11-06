@@ -5,6 +5,7 @@ import { getAbiItem, type Hex } from "viem";
 import { arkivPublic, gatewayAddress } from "@/lib/arkiv";
 import { Subscriptions } from "@/lib/schema";
 import { getSession, unauthorized } from "@/lib/session";
+import { route } from "@/lib/api";
 
 // The Arkiv system contract every entity operation emits its events from (SDK consts, not exported).
 const ARKIV_ADDRESS = "0x4400000000000000000000000000000000000044";
@@ -40,7 +41,7 @@ async function label(events: Event[]) {
  * Arkiv transactions from the last ~800 blocks. Admins: every recent entity the gateway created, patched or extended (samples, devices,
  * datasets, subscriptions). Labs: the Arkiv records of their own subscriptions (payments are listed by /api/subscriptions).
  */
-export async function GET() {
+export const GET = route(async function GET() {
   const session = await getSession();
   if (!session) return unauthorized();
   const pub = arkivPublic();
@@ -78,4 +79,4 @@ export async function GET() {
     }
   }
   return Response.json({ events: await label(events.slice(0, LIMIT)), latestBlock: latest.toString() });
-}
+});

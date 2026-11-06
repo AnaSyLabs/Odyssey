@@ -53,7 +53,6 @@ export default function Landing() {
           </button>
           <Link href="/docs" className="btn">Protocol</Link>
           <Link href="/mockups" className="btn">Mockups</Link>
-          <Link href="/testimonials" className="btn">Testimonials</Link>
           <Link href="/datasets" className="btn primary">Browse datasets</Link>
         </nav>
       </header>

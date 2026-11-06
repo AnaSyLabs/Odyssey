@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { encodeFunctionData, type Hex } from "viem";
 import McpAccess from "@/components/McpAccess";
 import { CardsSkeleton, Loading, RowsSkeleton } from "@/components/Skeleton";
+import { useToastError } from "@/components/Toaster";
 import { errorText, useWallet } from "@/components/wallet";
 import { ogTxUrl } from "@/lib/chains";
 import { short } from "@/lib/data";
@@ -36,7 +37,7 @@ async function fetchDatasets(): Promise<{ list?: Dataset[]; error?: string }> {
 export default function Datasets() {
   const { session } = useWallet();
   const [list, setList] = useState<Dataset[]>();
-  const [loadError, setLoadError] = useState<string>();
+  const [loadError, setLoadError] = useToastError();
   const [q, setQ] = useState("");
   const [openKey, setOpenKey] = useState<Hex>();
   const [creating, setCreating] = useState(false);
@@ -44,7 +45,7 @@ export default function Datasets() {
   const apply = useCallback((r: Awaited<ReturnType<typeof fetchDatasets>>) => {
     setLoadError(r.error);
     if (r.list) setList(r.list);
-  }, []);
+  }, [setLoadError]);
   const load = useCallback(async () => apply(await fetchDatasets()), [apply]);
   useEffect(() => { fetchDatasets().then(apply); }, [apply, session]);
 
@@ -81,7 +82,6 @@ export default function Datasets() {
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_420px]">
         <section className="grid content-start gap-3 md:grid-cols-2" aria-label="Datasets" aria-busy={!list && !loadError}>
-          {loadError && <p className="text-sm text-[var(--st-crimson)]" role="alert">{loadError}</p>}
           {!list && !loadError && <Loading label="Loading datasets from Arkiv" className="contents"><CardsSkeleton count={4} /></Loading>}
           {list && shown.length === 0 && (
             <p className="text-sm text-[var(--st-on-var)]">{list.length ? "No dataset matches." : session?.admin ? "No datasets yet. Create the first one." : "No datasets for sale yet."}</p>
@@ -126,7 +126,7 @@ function Detail({ d, reload }: { d: Dataset; reload: () => Promise<void> }) {
   const [preview, setPreview] = useState<Preview[]>();
   const [step, setStep] = useState<string>();
   const [tx, setTx] = useState<Hex>();
-  const [error, setError] = useState<string>();
+  const [, setError] = useToastError();
   const busy = !!step && step !== "done";
 
   useEffect(() => {
@@ -213,7 +213,6 @@ function Detail({ d, reload }: { d: Dataset; reload: () => Promise<void> }) {
         )}
         {step === "done" && <p className="text-sm text-[var(--st-phosphor)]" role="status">Subscribed. Samples in this dataset now decrypt for your wallet.</p>}
         {tx && <a className="block truncate text-xs text-[var(--st-cyan)] hover:underline" href={ogTxUrl(tx)} target="_blank" rel="noreferrer">Payment tx {short(tx)} ↗</a>}
-        {error && <p className="text-xs text-[var(--st-crimson)]" role="alert">{error}</p>}
 
         {d.paidUntil && (
           <details className="acc">
@@ -239,7 +238,7 @@ npm run lab:ingest`}</pre>
 function NewDataset({ onDone }: { onDone: (key?: Hex) => Promise<void> }) {
   const [f, setF] = useState({ name: "", description: "", lat: "19.0596", lon: "72.8295", radiusM: "500", kind: "", deviceType: "", from: "", to: "", price: "0.01" });
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string>();
+  const [, setError] = useToastError();
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
   const ts = (date: string, end = false) => (date ? Math.floor(new Date(`${date}T${end ? "23:59:59" : "00:00:00"}`).getTime() / 1000) : 0);
 
@@ -275,7 +274,6 @@ function NewDataset({ onDone }: { onDone: (key?: Hex) => Promise<void> }) {
         <label className="block"><span className="label">Captured to</span><input className="field" type="date" value={f.to} onChange={set("to")} /></label>
       </div>
       <label className="block"><span className="label">Price (0G per 30 days)</span><input className="field" required inputMode="decimal" value={f.price} onChange={set("price")} /></label>
-      {error && <p className="text-xs text-[var(--st-crimson)]" role="alert">{error}</p>}
       <div className="flex gap-2">
         <button className="btn primary flex-1" disabled={busy}>{busy ? "Writing to Arkiv…" : "Create dataset"}</button>
         <button type="button" className="btn" onClick={() => onDone()}>Cancel</button>

@@ -9,6 +9,7 @@ import { ENC, encrypt } from "@/lib/crypto";
 import { geohash } from "@/lib/geo";
 import { uploadTo0G } from "@/lib/og";
 import { KINDS, sampleMessage, sha256, type Upload } from "@/lib/sample";
+import { fail, route } from "@/lib/api";
 
 const MAX_UPLOAD = Number(process.env.MAX_UPLOAD_BYTES ?? 10 * 1024 * 1024);
 // Arkiv allows 128 KiB of bytes per entity; leave room for sensors and signature. Measured after encryption.
@@ -16,10 +17,8 @@ const INLINE_MAX = 96 * 1024;
 const DECIMAL = /^-?\d{1,3}(\.\d{1,9})?$/;
 const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/;
 
-const fail = (status: number, error: string) => Response.json({ error }, { status });
-
 /** Device upload: verify signature and registration, store payload, write a readonly Arkiv entity. */
-export async function POST(req: Request) {
+export const POST = route(async function POST(req: Request) {
   // Base64 grows the body by 4/3.
   if (Number(req.headers.get("content-length") ?? 0) > MAX_UPLOAD * 1.4 + 8192) return fail(413, "payload too large");
   const u: Upload | null = await req.json().catch(() => null);
@@ -91,4 +90,4 @@ export async function POST(req: Request) {
     { entityKey, txHash, expiresAt: expiresAt.toString(), device, contentHash, storage: inline ? "inline" : "0g", ogRoot },
     { status: 201 },
   );
-}
+});

@@ -5,12 +5,13 @@ import { arkivPublic, gatewayAddress } from "@/lib/arkiv";
 import { ogPublic, subscribedEvents } from "@/lib/contract";
 import { Datasets, Subscriptions } from "@/lib/schema";
 import { getSession, unauthorized } from "@/lib/session";
+import { route } from "@/lib/api";
 
 /**
  * The viewer's subscription payments (admins: everyone's), newest first: `Subscribed` events from the contract,
  * plus legacy periods recorded on Arkiv before it shipped. Subscribing itself is a call to the contract.
  */
-export async function GET() {
+export const GET = route(async function GET() {
   const session = await getSession();
   if (!session) return unauthorized();
   const pub = arkivPublic();
@@ -45,4 +46,4 @@ export async function GET() {
       .map((r) => ({ ...r, datasetName: names.get(r.dataset.toLowerCase()), active: r.paidUntil > now }))
       .sort((a, b) => b.paidUntil - a.paidUntil),
   });
-}
+});

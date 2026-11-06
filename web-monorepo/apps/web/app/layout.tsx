@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { JetBrains_Mono, Space_Mono, Urbanist } from "next/font/google";
 import Odi from "@/components/Odi";
 import ProductIntro from "@/components/ProductIntro";
+import Toaster from "@/components/Toaster";
 import "./globals.css";
 
 const mono = Space_Mono({ weight: ["400", "700"], subsets: ["latin"], variable: "--font-space-mono" });
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <ProductIntro />
         {children}
         <Odi />
+        <Toaster />
       </body>
     </html>
   );

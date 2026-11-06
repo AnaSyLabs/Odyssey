@@ -3,16 +3,17 @@ import { hexBytes, loadSample, open, readAccess } from "@/lib/access";
 import { findDevice } from "@/lib/arkiv";
 import { type Kind, sha256, signedText } from "@/lib/sample";
 import { getSession } from "@/lib/session";
+import { fail, route } from "@/lib/api";
 
 /**
  * One sample. Anyone gets the metadata and a re-checked device signature. A wallet with access (admin, or a
  * subscription whose dataset covers the sample) also gets the decrypted sensors and, for inline payloads, the data.
  * 0G payloads: GET /api/samples/{key}/data.
  */
-export async function GET(_req: Request, { params }: { params: Promise<{ key: string }> }) {
+export const GET = route(async function GET(_req: Request, { params }: { params: Promise<{ key: string }> }) {
   const { key } = await params;
   const s = await loadSample(key);
-  if (!s) return Response.json({ error: "not found, expired, or not written by this gateway" }, { status: 404 });
+  if (!s) return fail(404, "not found, expired, or not written by this gateway");
 
   const enc = s.enc?.value;
   const contentHash = s.contentHash.value;
@@ -53,4 +54,4 @@ export async function GET(_req: Request, { params }: { params: Promise<{ key: st
       sensorsHash: sensors ? sha256(sensors) === sensorsHash : null,
     },
   });
-}
+});

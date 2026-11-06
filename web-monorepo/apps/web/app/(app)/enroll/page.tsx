@@ -5,6 +5,7 @@ import Link from "next/link";
 import { LuArrowRight, LuCheck, LuCpu, LuFingerprint, LuLoader, LuShield, LuShieldCheck } from "react-icons/lu";
 import { IDKitRequestWidget, orbLegacy, type IDKitResult, type RpContext } from "@worldcoin/idkit";
 import { getAddress, isAddress } from "viem";
+import { useToastError } from "@/components/Toaster";
 
 type WorldConfig = { app_id: `app_${string}`; action: string; environment: "staging" | "production"; rp_context: RpContext };
 type Receipt = { device: string; worldId: string; txHash: string };
@@ -16,7 +17,7 @@ export default function EnrollPage() {
   const [mac, setMac] = useState("");
   const [config, setConfig] = useState<WorldConfig | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useToastError();
   const [receipt, setReceipt] = useState<Receipt | null>(null);
 
   const ready = isAddress(device.trim()) && MAC.test(mac.trim());
@@ -91,8 +92,6 @@ export default function EnrollPage() {
                 </p>
               </div>
             </div>
-
-            {error && <p role="alert" className="rounded-xl border border-[var(--st-crimson)] p-3 text-xs text-[var(--st-crimson)]">{error}</p>}
 
             {receipt ? (
               <div className="sub flex flex-col gap-3 p-4">

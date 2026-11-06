@@ -1,6 +1,7 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { isAdmin } from "@/lib/admins";
+import { fail } from "@/lib/api";
 import { need } from "@/lib/arkiv";
 import { readSession, type Session, signSession } from "@/lib/token";
 
@@ -21,4 +22,4 @@ export async function startSession(address: `0x${string}`) {
   });
 }
 
-export const unauthorized = () => Response.json({ error: "sign in with your wallet first" }, { status: 401 });
+export const unauthorized = () => fail(401, "sign in with your wallet first");

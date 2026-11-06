@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { LuWallet } from "react-icons/lu";
 import { Loading, PageSkeleton } from "@/components/Skeleton";
+import { useToastError } from "@/components/Toaster";
 import { errorText, useWallet } from "@/components/wallet";
 
 export default function SignInGate({ children }: { children: React.ReactNode }) {
   const { session, ready, signIn } = useWallet();
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string>();
+  const [, setError] = useToastError();
 
   if (!ready) return <Loading label="Checking your session"><PageSkeleton /></Loading>;
   if (session) return children;
@@ -30,7 +31,6 @@ export default function SignInGate({ children }: { children: React.ReactNode }) 
           }}>
             <LuWallet size={15} />{busy ? "Check your wallet…" : "Sign in with wallet"}
           </button>
-          {error && <p className="text-xs text-[var(--st-crimson)]" role="alert">{error}</p>}
           <p className="text-xs text-[var(--st-on-var)]">No wallet? Install MetaMask or any EVM browser wallet, then reload.</p>
         </div>
       </div>

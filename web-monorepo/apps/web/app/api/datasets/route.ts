@@ -10,12 +10,12 @@ import { findSamples } from "@/lib/query";
 import { KINDS, type Kind } from "@/lib/sample";
 import { Datasets } from "@/lib/schema";
 import { getSession, unauthorized } from "@/lib/session";
+import { fail, route } from "@/lib/api";
 
-const fail = (status: number, error: string) => Response.json({ error }, { status });
 const DECIMAL = /^-?\d{1,3}(\.\d{1,9})?$/;
 
 /** Datasets for sale (admins also see inactive ones), with sample counts and the viewer's subscription. */
-export async function GET() {
+export const GET = route(async function GET() {
   const session = await getSession();
   const pub = arkivPublic();
   // shortcut: one page of 100 datasets, and counts scan each dataset's samples; cache both when the catalogue grows.
@@ -33,10 +33,10 @@ export async function GET() {
     };
   }));
   return Response.json({ datasets });
-}
+});
 
 /** Admin: create a dataset (a saved filter + a price in 0G per 30 days) and list it on the subscriptions contract. */
-export async function POST(req: Request) {
+export const POST = route(async function POST(req: Request) {
   const session = await getSession();
   if (!session) return unauthorized();
   if (!session.admin) return fail(403, "admins only");
@@ -76,4 +76,4 @@ export async function POST(req: Request) {
   const priceTx = await setContractPrice(entityKey, price).catch((e: Error) => e);
   if (priceTx instanceof Error) return Response.json({ key: entityKey, txHash, error: `Saved on Arkiv, but listing it on the subscriptions contract failed: ${priceTx.message}. Refresh, then unlist and list the dataset again to retry.` }, { status: 502 });
   return Response.json({ key: entityKey, txHash, priceTx }, { status: 201 });
-}
+});

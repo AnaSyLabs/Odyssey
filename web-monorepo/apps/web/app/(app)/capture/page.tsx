@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { LuCamera, LuCircleCheck, LuCircleX, LuFingerprint, LuLock } from "react-icons/lu";
 import { isAddress } from "viem";
+import { useToastError } from "@/components/Toaster";
 import { short } from "@/lib/data";
 
 type Device = {
@@ -32,7 +33,7 @@ export default function CapturePage() {
   const [info, setInfo] = useState<Device | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [loaded, setLoaded] = useState<Sample | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useToastError();
 
   const valid = isAddress(device.trim());
 
@@ -51,7 +52,7 @@ export default function CapturePage() {
     load();
     const t = setInterval(load, POLL_MS);
     return () => { stop = true; clearInterval(t); };
-  }, [device, valid]);
+  }, [device, valid, setError]);
 
   const key = selected ?? info?.samples[0]?.key ?? null;
   useEffect(() => {
@@ -76,10 +77,8 @@ export default function CapturePage() {
         </label>
       </header>
 
-      {error && (
-        <p role="alert" className="glass p-4 text-sm text-[var(--st-crimson)]">
-          {error}{error.includes("not registered") && <> · <Link className="underline" href="/enroll">Enroll it</Link></>}
-        </p>
+      {error?.includes("not registered") && (
+        <p className="glass p-4 text-sm">This device isn&apos;t enrolled yet. <Link className="underline" href="/enroll">Enroll it</Link></p>
       )}
 
       {info && (

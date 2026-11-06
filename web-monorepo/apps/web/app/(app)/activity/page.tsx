@@ -1,10 +1,12 @@
 "use client";
 import { LuExternalLink } from "react-icons/lu";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { encodeFunctionData } from "viem";
 import { Loading, RowsSkeleton } from "@/components/Skeleton";
+import { useToastError } from "@/components/Toaster";
 import { errorText, useWallet } from "@/components/wallet";
+import { api } from "@/lib/fetch";
 import { arkivTxUrl, ogTxUrl } from "@/lib/chains";
 import { short } from "@/lib/data";
 import { subscriptionsAbi } from "@/lib/subscriptions-abi";
@@ -36,13 +38,13 @@ function Ledger({ admin }: { admin: boolean }) {
   const [payments, setPayments] = useState<Payment[]>();
   const [events, setEvents] = useState<Event[]>();
   const [latest, setLatest] = useState<string>();
-  const [error, setError] = useState<string>();
+  const [error, setError] = useToastError();
   const [rewards, setRewards] = useState<{ contract: `0x${string}`; rewards: Reward[] }>();
   const [claiming, setClaiming] = useState<string>();
   const { pay } = useWallet();
 
-  const loadRewards = () => fetch("/api/rewards").then((r) => r.json()).then(setRewards).catch((e) => setError(errorText(e)));
-  useEffect(() => { loadRewards(); }, []);
+  const loadRewards = useCallback(() => api("/api/rewards").then(setRewards).catch((e) => setError(errorText(e))), [setError]);
+  useEffect(() => { loadRewards(); }, [loadRewards]);
 
   // Anyone may call claim(); the contract always pays the account in the leaf, here the signed-in wallet.
   const claim = async (r: Reward) => {
@@ -62,15 +64,9 @@ function Ledger({ admin }: { admin: boolean }) {
   };
 
   useEffect(() => {
-    const get = async (url: string) => {
-      const r = await fetch(url);
-      const b = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(b.error ?? `${url} failed (${r.status})`);
-      return b;
-    };
-    get("/api/subscriptions").then((b) => setPayments(b.subscriptions)).catch((e) => setError(errorText(e)));
-    get("/api/activity").then((b) => { setEvents(b.events); setLatest(b.latestBlock); }).catch((e) => setError(errorText(e)));
-  }, []);
+    api("/api/subscriptions").then((b) => setPayments(b.subscriptions)).catch((e) => setError(errorText(e)));
+    api("/api/activity").then((b) => { setEvents(b.events); setLatest(b.latestBlock); }).catch((e) => setError(errorText(e)));
+  }, [setError]);
 
   return (
     <main className="flex flex-col gap-4">
@@ -80,7 +76,6 @@ function Ledger({ admin }: { admin: boolean }) {
           {admin ? "Every subscription payment on 0G, your contributor rewards, and every recent write by the gateway on Arkiv." : "Your subscription payments on 0G, your contributor rewards, and the Arkiv records that grant access."}
         </p>
       </header>
-      {error && <p className="text-sm text-[var(--st-crimson)]" role="alert">{error}</p>}
 
       <section className="glass overflow-hidden" aria-label="Payments">
         <p className="eyebrow border-b border-[var(--st-line)] px-4 py-3">Subscription payments · 0G Galileo</p>

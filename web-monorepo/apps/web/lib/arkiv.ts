@@ -4,6 +4,7 @@ import { createPublicClient, createWalletClient, ExpirationTime } from "@arkiv-n
 import { rabdi } from "@arkiv-network/sdk/chains";
 import { eq } from "@arkiv-network/sdk/query";
 import { addr } from "@arkiv-network/sdk/schema";
+import { fail } from "@/lib/api";
 import { Devices } from "@/lib/schema";
 import { getAddress, http, isAddress, isHex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
@@ -46,8 +47,6 @@ export async function findDevice(device: `0x${string}`) {
     .fetch();
   return entities[0];
 }
-
-const fail = (status: number, error: string) => Response.json({ error }, { status });
 
 /**
  * Binds a device key to a World ID nullifier, one device per human. Callers must have verified the World ID proof.

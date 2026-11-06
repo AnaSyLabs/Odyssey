@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import { createWalletClient, custom, type EIP1193Provider, getAddress, type Hex, toHex } from "viem";
 import { createSiweMessage } from "viem/siwe";
 import { galileo } from "@/lib/chains";
+import { useToastError } from "@/components/Toaster";
 import { short } from "@/lib/data";
 
 declare global {
@@ -119,7 +120,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 export function WalletButton() {
   const { session, ready, signIn, signOut } = useWallet();
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string>();
+  const [, setError] = useToastError();
 
   if (!ready) return null;
   if (session) {
@@ -133,7 +134,6 @@ export function WalletButton() {
   }
   return (
     <div className="flex items-center gap-2">
-      {error && <span className="max-w-64 truncate text-xs text-[var(--st-crimson)]" title={error} role="alert">{error}</span>}
       <button className="btn primary" disabled={busy} onClick={async () => {
         setBusy(true);
         setError(undefined);
