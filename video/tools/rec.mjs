@@ -13,7 +13,10 @@ const CONSENSUS = "0x83bea227e5D2C72f8F0F73E63175759D4E6055DC";
 const OUT = new URL("./takes/", import.meta.url).pathname;
 const W = 1440, H = 810, DSF = 2; // CSS viewport; frames are 2880x1620
 mkdirSync(OUT, { recursive: true });
-const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+// STRETCH (JSON {take: factor}, from fit.py) lengthens a take's pauses so it runs as long as its narration
+const STRETCH = JSON.parse(process.env.STRETCH ?? "{}");
+let stretch = 1;
+const wait = (ms) => new Promise((r) => setTimeout(r, ms * stretch));
 
 const CURSOR = `addEventListener("DOMContentLoaded", () => {
   const c = document.createElement("div");
@@ -26,6 +29,7 @@ const CURSOR = `addEventListener("DOMContentLoaded", () => {
 });`;
 
 async function take(browser, n, fn) {
+  stretch = STRETCH[n] ?? 1;
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: DSF, colorScheme: "dark" });
   await ctx.addInitScript(() => { try { sessionStorage.setItem("odyssey:intro", "1"); document.documentElement.dataset.intro = "off"; } catch {} });
   await ctx.addInitScript(CURSOR);
