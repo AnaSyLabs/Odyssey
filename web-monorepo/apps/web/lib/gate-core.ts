@@ -1,10 +1,14 @@
 // The capture gate's decision call, kept free of server-only imports so `npm test` can run it with a fake fetch.
 
 export type Action = "capture" | "skip" | "stop";
+/** The fixed scene vocabulary used when labelling is on. */
+export const SCENES = ["street", "indoor", "nature", "shop", "vehicle", "crowd", "other"] as const;
 export type GateInput = { data: Buffer; mime: string; kind: string };
 export type Decision = {
   action: Action;
   reason: string;
+  /** Scene tag from SCENES; only present when labelling is on and the model gave a valid one. */
+  scene?: string;
   /** x_0g_trace.request_id from the 0G router: ties this decision to one real compute call. */
   requestId: string;
   provider?: string;
@@ -12,12 +16,12 @@ export type Decision = {
   /** true only when the router reported TEE verification for this call. */
   teeVerified?: boolean;
 };
-export type GateConfig = { baseUrl: string; apiKey: string; model: string; verifyTee: boolean; timeoutMs: number; fetch: typeof fetch };
+export type GateConfig = { baseUrl: string; apiKey: string; model: string; verifyTee: boolean; labels: boolean; timeoutMs: number; fetch: typeof fetch };
 
 /** 0G could not give a real decision (down, out of credit, garbled answer). The gateway must stop, not guess. */
 export class GateUnavailable extends Error {}
 
-const PROMPT =
+const BASE_PROMPT =
   "You are the capture gate of a pair of smart glasses that collect real-world data for AI labs. " +
   "Look at this photo and decide what the glasses should do. " +
   'Answer with JSON only: {"action":"capture"|"skip"|"stop","reason":"<one sentence>"}. ' +
@@ -26,14 +30,22 @@ const PROMPT =
   "The camera is a low-resolution black-and-white sensor, so grainy, blurry, grayscale or low-detail images are normal and must be captured, not skipped. " +
   "stop = the photo shows something that must not be recorded: a face at close range, a screen with private content, a bathroom or changing room, a ID card or payment card.";
 
-/** Pulls {"action","reason"} out of a model reply. Returns null when it is not a valid decision. */
-export function parseDecision(text: string): { action: Action; reason: string } | null {
+const JSON_FORMAT = 'Answer with JSON only: {"action":"capture"|"skip"|"stop","reason":"<one sentence>"}. ';
+const LABEL_FORMAT =
+  `Answer with JSON only: {"action":"capture"|"skip"|"stop","reason":"<one sentence>","scene":"${SCENES.join('"|"')}"}. ` +
+  "scene is what the photo mainly shows. ";
+/** With labels off this is exactly the original prompt. */
+export const promptFor = (labels: boolean) => (labels ? BASE_PROMPT.replace(JSON_FORMAT, LABEL_FORMAT) : BASE_PROMPT);
+
+/** Pulls {"action","reason"} (and "scene" when labels is on) out of a model reply. Returns null when it is not a valid decision. */
+export function parseDecision(text: string, labels = false): { action: Action; reason: string; scene?: string } | null {
   const m = text.match(/\{[\s\S]*\}/);
   if (!m) return null;
   try {
     const j = JSON.parse(m[0]);
     if (j.action !== "capture" && j.action !== "skip" && j.action !== "stop") return null;
-    return { action: j.action, reason: String(j.reason ?? "").slice(0, 300) };
+    const scene = labels && (SCENES as readonly string[]).includes(j.scene) ? { scene: j.scene as string } : {};
+    return { action: j.action, reason: String(j.reason ?? "").slice(0, 300), ...scene };
   } catch {
     return null;
   }
@@ -55,7 +67,7 @@ export async function decide(input: GateInput, cfg: GateConfig): Promise<Decisio
           {
             role: "user",
             content: [
-              { type: "text", text: PROMPT },
+              { type: "text", text: promptFor(cfg.labels) },
               { type: "image_url", image_url: { url: `data:${input.mime};base64,${input.data.toString("base64")}` } },
             ],
           },
@@ -69,7 +81,7 @@ export async function decide(input: GateInput, cfg: GateConfig): Promise<Decisio
   // 402 insufficient_balance, 429, 502, 503 no_available_provider and any other non-2xx all land here.
   if (!res.ok) throw new GateUnavailable(`0G compute ${res.status}: ${body?.error?.code ?? body?.error?.message ?? "error"}`);
   const requestId = body?.x_0g_trace?.request_id;
-  const parsed = parseDecision(String(body?.choices?.[0]?.message?.content ?? ""));
+  const parsed = parseDecision(String(body?.choices?.[0]?.message?.content ?? ""), cfg.labels);
   if (!requestId || !parsed) throw new GateUnavailable("0G compute returned no usable decision");
   return {
     ...parsed,
