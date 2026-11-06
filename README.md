@@ -251,12 +251,12 @@ New samples that match a dataset are covered automatically.
 
 **70 %** of every payment is set aside for contributors and **30 %** goes to the treasury. The owner can change the split, but the contract never lets the contributor share fall below 50 %.
 
-1. **Payout wallet.** Each device can have a payout wallet: its owner's wallet, never the key on the glasses. Set it at registration (`payout` in `POST /api/devices`) or later with `PATCH /api/devices`.
+1. **Payout wallet.** Every device is registered with a payout wallet: the wallet of the person who owns it (the World ID holder), never the key on the glasses. `POST /api/devices` requires `payout`, so the registration page sends the wallet the owner connected. It can be changed later with `PATCH /api/devices`.
 2. **Epochs.** An admin runs `npm run rewards:publish`. For every `Subscribed` event since the last epoch, it splits the dataset's contributor share across the dataset's samples, pro rata by device, to each device's payout wallet. It publishes one Merkle root with `publishRewards` and stores the leaves on Arkiv (`odsy.rewards`), plus a local copy in `apps/web/rewards/`.
 3. **Claiming.** Contributors see their share under **Transactions → Contributor rewards** and click **Claim**. Anyone may call `claim()` for an account; the money always goes to that account.
 4. **Safety limits.** The contract never pays more than an epoch's published total. The owner can only withdraw treasury revenue (`withdrawTreasury`), never contributor funds.
 
-Shares for devices without a payout wallet, and rounding dust, stay unallocated in the contract.
+Shares for devices without a payout wallet (only devices registered before `payout` became required), and rounding dust, stay unallocated in the contract.
 
 ### Geospatial index
 
@@ -314,7 +314,7 @@ Runs are incremental. The cursor is `$expiresAt`: new and extended samples alway
 
 | Endpoint | Auth | Does |
 |---|---|---|
-| `POST /api/devices` | `Bearer REGISTRAR_TOKEN` | Binds `{device, worldId, deviceType, mac, payout?}`. Called by the World ID registration page after it verifies the proof |
+| `POST /api/devices` | `Bearer REGISTRAR_TOKEN` | Binds `{device, worldId, deviceType, mac, payout}`; `payout` is the owner's wallet and is required. Called by the World ID registration page after it verifies the proof |
 | `PATCH /api/devices` | `Bearer REGISTRAR_TOKEN` | `{device, payout}`: set the wallet that receives a device's rewards |
 | `POST /api/ingest` | Device signature | `{kind, mime, capturedAt, lat, lon, sensors, data (base64), signature}` → `201 {entityKey, txHash, contentHash, storage, ogRoot}`. `403` for an unregistered or banned device |
 | `GET /api/samples?lat=&lon=&radius=&kind=&deviceType=&from=&to=&limit=` or `?dataset=` | Public (metadata) | Samples within `radius` metres (max 50 km) or in a dataset, nearest first. `readable` says whether the viewer can decrypt |
