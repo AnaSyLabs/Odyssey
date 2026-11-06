@@ -3,7 +3,7 @@ import { and, asc, between, eq, gt, lt, startsWith } from "@arkiv-network/sdk/qu
 import { addr, key, u64 } from "@arkiv-network/sdk/schema";
 import type { Hex } from "viem";
 import { arkivPublic, arkivWallet, Devices, gatewayAddress, hasBearer, Samples } from "@/lib/arkiv";
-import { Datasets } from "@/lib/schema";
+import { Datasets, Rewards } from "@/lib/schema";
 import { groupOf, thinGroup } from "@/lib/retention";
 
 const PRECISION = Number(process.env.THIN_GEOHASH_PRECISION ?? 7); // geohash-7 ≈ 153 m x 153 m
@@ -25,7 +25,7 @@ const afterKey = (after?: Hex) => (after ? [gt("$key", key(after))] : []);
 
 /**
  * Retention: extends samples about to expire, keeping only one per (device, geohash cell, time window),
- * and extends every device registration and dataset. Subscriptions are left to expire after their paid period. Schedule daily (Vercel cron or any scheduler) with
+ * and extends every device registration, dataset and reward epoch. Subscriptions are left to expire after their paid period. Schedule daily (Vercel cron or any scheduler) with
  * `Authorization: Bearer $CRON_SECRET`.
  * shortcut: runs in one request; split into batches if a day's expiring set outgrows the function timeout.
  */
@@ -76,7 +76,12 @@ export async function GET(req: Request) {
       .ownedBy(gateway).orderBy(asc("$key")).limit(100).fetch(),
   );
 
-  const toExtend = [...keep, ...devices.map((d) => d.$key), ...datasets.map((d) => d.$key)];
+  const rewards = await scan((after) =>
+    pub.select({ $key: true }).from(Rewards, { onMismatch: "throw" }).where(and(lt("$expiresAt", soon), ...afterKey(after)))
+      .ownedBy(gateway).orderBy(asc("$key")).limit(100).fetch(),
+  );
+
+  const toExtend = [...keep, ...devices.map((d) => d.$key), ...datasets.map((d) => d.$key), ...rewards.map((r) => r.$key)];
   const wallet = arkivWallet();
   for (let i = 0; i < toExtend.length; i += 50) {
     await wallet.executeBatch({
@@ -90,5 +95,6 @@ export async function GET(req: Request) {
     droppedSamples: expiring.length - keep.length,
     extendedDevices: devices.length,
     extendedDatasets: datasets.length,
+    extendedRewardEpochs: rewards.length,
   });
 }

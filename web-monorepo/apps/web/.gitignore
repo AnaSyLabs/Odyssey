@@ -36,6 +36,9 @@ yarn-error.log*
 # ENS setup state, holds demo wallet keys
 scripts/.ens-setup.json
 
+# local copies of published reward epochs (scripts/publish-rewards.ts)
+/rewards
+
 # lab ingest output (scripts/lab-ingest.ts)
 /lab-data
 /lab-*/

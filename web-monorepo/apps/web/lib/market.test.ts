@@ -1,10 +1,11 @@
-// Encryption, sessions, payments and dataset filters. Run: npm test (no network).
+// Encryption, sessions, reward splits and dataset filters. Run: npm test (no network).
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import { test } from "node:test";
+import { concat, encodeAbiParameters, keccak256, parseAbiParameters } from "viem";
 import { decrypt, ENC_OVERHEAD, encrypt, sampleKey } from "./crypto.ts";
 import { matches } from "./filters.ts";
-import { checkPayment, nextPaidUntil, PERIOD_SECONDS } from "./payment.ts";
+import { allocate, type Leaf, rewardTree } from "./rewards.ts";
 import { sha256 } from "./sample.ts";
 import { readSession, signSession } from "./token.ts";
 
@@ -37,22 +38,27 @@ test("session tokens are signed and expire", () => {
   assert.equal(readSession(undefined, "s3cret"), null);
 });
 
-test("payments must match payer, treasury, dataset and price", () => {
-  const want = { payer: "0xAa00000000000000000000000000000000000001", treasury: "0xBb00000000000000000000000000000000000002", dataset: `0x${"cd".repeat(32)}`, price: 10n };
-  const tx = { from: want.payer.toLowerCase(), to: want.treasury, value: 10n, input: want.dataset };
-  const ok = { status: "success" as const };
-  assert.equal(checkPayment(tx, ok, want), null);
-  assert.equal(checkPayment({ ...tx, value: 12n }, ok, want), null);
-  assert.match(checkPayment(tx, { status: "reverted" }, want)!, /reverted/);
-  assert.match(checkPayment({ ...tx, from: "0x0000000000000000000000000000000000000009" }, ok, want)!, /signed-in/);
-  assert.match(checkPayment({ ...tx, to: "0x0000000000000000000000000000000000000009" }, ok, want)!, /treasury/);
-  assert.match(checkPayment({ ...tx, input: "0x" }, ok, want)!, /dataset key/);
-  assert.match(checkPayment({ ...tx, value: 9n }, ok, want)!, /below/);
+test("contributor revenue splits pro rata by samples, per payout wallet", () => {
+  const A = "0x00000000000000000000000000000000000000aa";
+  const B = "0x00000000000000000000000000000000000000bb";
+  const revenue = new Map([["ds1", 7_000n], ["ds2", 10n]]);
+  const samples = new Map([
+    ["ds1", new Map([["dev1", 2], ["dev2", 1], ["dev3", 4]])],
+    ["ds2", new Map([["dev1", 3]])],
+  ]);
+  const payout = new Map<string, `0x${string}` | undefined>([["dev1", A], ["dev2", A], ["dev3", undefined]]);
+  const out = allocate(revenue, samples, payout);
+  // ds1: 7000 over 7 samples = 1000 each; dev1+dev2 -> A (3000), dev3 has no wallet. ds2: all 10 to dev1 -> A.
+  assert.deepEqual([...out], [[A, 3_010n]]);
+  assert.equal(allocate(revenue, samples, new Map([["dev1", B]])).get(B), 2_010n); // floors 7000*2/7
 });
 
-test("renewals stack from the paid-until time, lapsed ones restart now", () => {
-  assert.equal(nextPaidUntil(5_000_000, 1_000), 5_000_000 + PERIOD_SECONDS);
-  assert.equal(nextPaidUntil(500, 1_000), 1_000 + PERIOD_SECONDS);
+test("reward leaves hash exactly like OdsySubscriptions.claim", () => {
+  const leaf: Leaf = [3n, "0x00000000000000000000000000000000000000aa", 5_000n];
+  const tree = rewardTree([leaf, [3n, "0x00000000000000000000000000000000000000bb", 2_000n]]);
+  const solidity = keccak256(concat([keccak256(encodeAbiParameters(parseAbiParameters("uint256, address, uint256"), leaf))]));
+  assert.equal(tree.leafHash(leaf), solidity);
+  assert.ok(tree.getProof(leaf).length === 1);
 });
 
 test("dataset filter matches circle, kind, device type and time", () => {
