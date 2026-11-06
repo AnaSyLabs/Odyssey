@@ -12,8 +12,8 @@ Testnets only (Arkiv Rabdi, 0G Galileo). Mainnet is out of scope until the audit
 | Gateway (Arkiv + 0G) | Done: signed and encrypted ingest, geo search, paid subscriptions, lab ingest, retention cron. Live-tested up to ingest and dataset creation |
 | `OdsySubscriptions` | Deployed on Galileo `0xc3a946516f2f0CE3fc2065543cb0a8E9b105A54e`, 14 tests. Subscribe and claim not yet run live |
 | `ConsensusRegistry` | Deployed on Galileo `0x83bea227e5D2C72f8F0F73E63175759D4E6055DC`, 10 tests, hand-tested live. Gateway enforces bans |
-| World ID enrollment | `/enroll` verifies the proof (signal = device address) and registers the device with a payout wallet. Not yet live-tested |
-| Firmware (`firmware/`) | `odsy_glasses_camera` signs captures with a device key and uploads to the gateway; hardware run not yet confirmed here |
+| World ID enrollment | `/enroll` verifies the proof (signal = device address) and registers the device with a payout wallet. Live-tested with a staging app and simulator.worldcoin.org |
+| Firmware (`firmware/`) | `odsy_glasses_camera` signs captures with a device key and uploads to the gateway. Confirmed end to end on the ESP32-CAM: enroll, touch IO13, signed photo stored |
 | Contract audit | Not done |
 
 ## 1. Live testing (do first, in this order)
@@ -54,8 +54,8 @@ Steps are in [TESTING.md](TESTING.md).
 
 ## 5. Hardware and real data
 
-- [ ] Confirm the ESP32 camera firmware signs and uploads to `/api/ingest` end to end on real hardware (`firmware/odsy_glasses_camera`).
-- [ ] Live-test `/enroll` with a World ID app (staging works with simulator.worldcoin.org).
+- [x] Confirm the ESP32 camera firmware signs and uploads to `/api/ingest` end to end on real hardware (`firmware/odsy_glasses_camera`).
+- [x] Live-test `/enroll` with a World ID app (staging works with simulator.worldcoin.org).
 - [ ] Real GPS instead of the hard-coded Bandra location; witness co-signing.
 - [ ] Device key in a secure element (ATECC608A) or ESP32 flash encryption.
 - [ ] Batch Merkle roots on a long-lived chain.

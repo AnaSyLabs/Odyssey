@@ -114,7 +114,7 @@ See it: TESTING.md parts 2 and 3. Both contracts are linked under *Deployed cont
 
 | What we built | Where | Status |
 |---|---|---|
-| A device key is bound to a World ID nullifier, one device per human. The proof's signal is the device address, so one human's proof cannot enroll another device | `app/api/enroll`, `lib/arkiv.ts` (`registerDevice`), `Devices` schema | Built (World ID v4, RP-signed request, verified against the developer portal). Not yet live-tested by us |
+| A device key is bound to a World ID nullifier, one device per human. The proof's signal is the device address, so one human's proof cannot enroll another device | `app/api/enroll`, `lib/arkiv.ts` (`registerDevice`), `Devices` schema | Built (World ID v4, RP-signed request, verified against the developer portal). Live-tested with a staging app, the simulator and the ESP32-CAM |
 | Every sample carries the World ID that captured it | `Samples.worldId` | Live |
 | Two provable strikes ban a World ID: no uploads, no new device, data from its first strike unreadable | `ConsensusRegistry`, `lib/consensus.ts`, `lib/access.ts` | Built, contract run live, gateway path not yet end to end |
 
@@ -425,7 +425,7 @@ node -e "import('viem/accounts').then(a=>{const k=a.generatePrivateKey();console
 - **Explorer links** assume `/tx/<hash>` paths on chainscan-galileo.0g.ai and rabdi.explorer.arkiv.network.
 - **Device keys are only as safe as the device.** Real glasses need the key in a secure element (ATECC608A) or ESP32 flash encryption. A key in plain NVS can be copied.
 - **Location is hard-coded to Bandra, Mumbai**, because there is no GPS yet. Even with GPS, a signed location is only as honest as the device; witness co-signing (see *How it works*) is the planned check.
-- **World ID is verified in `/api/enroll`, not in `POST /api/devices`.** The latter trusts its caller through `REGISTRAR_TOKEN`, so keep that token secret or leave it unset. The enroll flow needs `WORLD_APP_ID`, `WORLD_RP_ID` and `WORLD_RP_SIGNING_KEY`, and has not been run live by us.
+- **World ID is verified in `/api/enroll`, not in `POST /api/devices`.** The latter trusts its caller through `REGISTRAR_TOKEN`, so keep that token secret or leave it unset. The enroll flow needs `WORLD_APP_ID`, `WORLD_RP_ID` and `WORLD_RP_SIGNING_KEY` (plus `WORLD_ENVIRONMENT=staging` for the simulator), and has been run live with a staging app and the ESP32-CAM.
 - **Privacy.** MAC addresses and World ID nullifiers are public on Arkiv. Images can show bystanders. Before real users: hash or drop the MAC and blur faces at the gateway. Immutable personal data also conflicts with GDPR and DPDP deletion rights. Per-sample keys make crypto-shredding possible, by destroying `DATA_KEY`, but only for all samples at once.
 - **Live-tested so far:** device registration, plaintext and encrypted ingest (text and sensor samples), geo queries, wallet sign-in, dataset creation and the lab ingest job's sign-in and dataset lookup, all against Arkiv Rabdi. Not yet confirmed end to end on live networks: a paid subscription unlocking decryption, lab ingest writing decrypted files, payloads over 96 KiB on 0G, the Transactions log, the retention job, and the subscriptions contract on Galileo (deploy, subscribe, publish and claim rewards).
 - **Scale shortcuts** are marked `shortcut:` in code. The geo scan stops at 2,000 candidates. Duplicate and registration checks can race. The extend job runs in a single request.
