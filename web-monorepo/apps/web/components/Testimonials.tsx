@@ -1,24 +1,36 @@
+"use client";
 import Image from "next/image";
-import TESTIMONIALS from "@/lib/testimonials.json";
+import { useEffect, useState } from "react";
+import { short } from "@/lib/data";
 
-export default function Testimonials() {
+type Testimonial = { key: string; hash: string; addedAt: number };
+
+/** Every testimonial from Arkiv: the user's image on the left, their hash on the right. Change `version` to reload. */
+export default function Testimonials({ version = 0 }: { version?: number }) {
+  const [list, setList] = useState<Testimonial[]>();
+  const [error, setError] = useState<string>();
+
+  useEffect(() => {
+    fetch("/api/testimonials")
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`testimonials failed (${r.status})`))))
+      .then((b) => setList(b.testimonials))
+      .catch((e: Error) => setError(e.message));
+  }, [version]);
+
+  if (error) return <p className="text-center text-sm text-[var(--st-crimson)]" role="alert">{error}</p>;
+  if (!list) return <p className="muted text-center text-sm">Loading testimonials from Arkiv…</p>;
+  if (!list.length) return <p className="muted text-center text-sm">No testimonials yet.</p>;
   return (
-    <>
-      <div className="grid gap-3 md:grid-cols-3">
-        {TESTIMONIALS.map((t) => (
-          <figure key={t.hash} className="glass flex gap-4 p-6">
-            <Image src={t.image} alt={t.name} width={56} height={56} className="size-14 shrink-0 rounded-full" />
-            <div className="flex min-w-0 flex-1 flex-col">
-              <blockquote className="flex-1 text-sm">&ldquo;{t.quote}&rdquo;</blockquote>
-              <figcaption className="mt-4">
-                <span className="eyebrow block">{t.name} · {t.role}</span>
-                <code className="mt-1 block text-xs text-[var(--st-on-var)]" title={t.hash}>{t.hash.slice(0, 10)}…{t.hash.slice(-8)}</code>
-              </figcaption>
-            </div>
-          </figure>
-        ))}
-      </div>
-      <p className="mt-4 text-center text-xs text-[var(--st-on-var)]">Illustrative quotes for the demo.</p>
-    </>
+    <div className="grid gap-3 md:grid-cols-3">
+      {list.map((t) => (
+        <figure key={t.key} className="glass flex items-center gap-4 p-4">
+          <Image src={`/api/testimonials/${t.key}/image`} alt="" width={96} height={96} unoptimized className="size-24 shrink-0 rounded-xl object-cover" />
+          <figcaption className="min-w-0">
+            <p className="eyebrow">User hash</p>
+            <code className="mt-1 block text-xs" title={t.hash}>{short(t.hash, 10, 8)}</code>
+          </figcaption>
+        </figure>
+      ))}
+    </div>
   );
 }

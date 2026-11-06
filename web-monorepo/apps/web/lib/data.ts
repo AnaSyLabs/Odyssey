@@ -86,6 +86,4 @@ export const DATASETS: Dataset[] = [
   },
 ];
 
-export const STATS = { hours: 4510, devices: 1114, validators: 86, verifiedShare: 0.97 };
-
 export const short = (h: string, a = 8, b = 6) => `${h.slice(0, a)}…${h.slice(-b)}`;
