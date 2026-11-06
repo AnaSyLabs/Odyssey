@@ -5,6 +5,7 @@ import { useState } from "react";
 import { LuArrowRight, LuBanknote, LuBot, LuCloudUpload, LuCpu, LuDatabase, LuFilter, LuGlasses, LuLink, LuMoon, LuScale, LuShieldCheck, LuSun, LuUserCheck } from "react-icons/lu";
 import Logo from "@/components/Logo";
 import { STATS } from "@/lib/data";
+import Testimonials from "@/components/Testimonials";
 import { setDark, useDark } from "@/lib/theme";
 
 const Glasses3D = dynamic(() => import("@/components/lab/Glasses3D"), {
@@ -145,6 +146,12 @@ export default function Landing() {
               </div>
             ))}
           </div>
+        </section>
+
+        <section className="pb-20" aria-labelledby="testimonials">
+          <h2 id="testimonials" className="text-center text-3xl font-semibold tracking-tight">Voices from the network.</h2>
+          <div className="mt-8"><Testimonials /></div>
+          <p className="mt-2 text-center"><Link href="/testimonials" className="btn">All testimonials <LuArrowRight size={16} /></Link></p>
         </section>
       </main>
 

@@ -1,0 +1,20 @@
+[
+  {
+    "quote": "I wear them on my commute and get paid for clips I'd have recorded anyway. And I can see every one I've uploaded.",
+    "name": "Contributor",
+    "role": "Mumbai",
+    "image": "/testimonials/contributor.svg"
+  },
+  {
+    "quote": "Each sample comes with a signature and an on-chain root. That's the first time a dataset vendor has given us a receipt.",
+    "name": "AI lab",
+    "role": "Robotics team",
+    "image": "/testimonials/lab.svg"
+  },
+  {
+    "quote": "I score a small random sample and only lose stake on hard evidence. The rules are clear enough to trust.",
+    "name": "Validator",
+    "role": "Galileo testnet",
+    "image": "/testimonials/validator.svg"
+  }
+]
