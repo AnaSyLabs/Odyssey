@@ -47,7 +47,7 @@ Steps are in [TESTING.md](TESTING.md).
 
 ## 4. Deploy to Vercel
 
-- [ ] Root directory `web-monorepo/apps/web`, Node 22.x. Env vars: `ARKIV_ACCESS_KEY`, `ARKIV_PRIVATE_KEY`, `OG_PRIVATE_KEY`, `REGISTRAR_TOKEN`, `CRON_SECRET`, `DATA_KEY`, `SESSION_SECRET`, `ADMIN_ADDRESSES`, `SUBSCRIPTIONS_ADDRESS`, `SUBSCRIPTIONS_FROM_BLOCK`, `CONSENSUS_ADDRESS`, and for `/enroll` `WORLD_APP_ID`, `WORLD_RP_ID`, `WORLD_RP_SIGNING_KEY`.
+- [ ] Root directory `web-monorepo/apps/web`, Node 22.x. Env vars: `ARKIV_ACCESS_KEY`, `ARKIV_PRIVATE_KEY`, `OG_PRIVATE_KEY`, `REGISTRAR_TOKEN`, `CRON_SECRET`, `DATA_KEY`, `SESSION_SECRET`, `ADMIN_ADDRESSES`, `SUBSCRIPTIONS_ADDRESS`, `SUBSCRIPTIONS_FROM_BLOCK`, `CONSENSUS_ADDRESS`, and for `/enroll` `WORLD_APP_ID`, `WORLD_RP_ID`, `WORLD_RP_SIGNING_KEY`, `WORLD_ENVIRONMENT`.
 - [ ] Set `MAX_UPLOAD_BYTES` to about 3 MB (Vercel rejects bodies over 4.5 MB, and base64 adds a third).
 - [ ] Add `maxDuration` to the ingest and cron routes if logs show timeouts.
 - [ ] Point the simulator at the Vercel URL and run `npm run simulate -- 2`.

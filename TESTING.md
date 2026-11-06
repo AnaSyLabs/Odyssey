@@ -72,7 +72,7 @@ cd ../web-monorepo && npm run dev       # http://localhost:3000
 
 ### 2b. World ID enrollment (optional)
 
-Needs a World ID app with a `register-device` action (developer.world.org; use a staging app with simulator.worldcoin.org). Set `WORLD_APP_ID`, `WORLD_RP_ID` and `WORLD_RP_SIGNING_KEY`, restart, and sign in.
+Needs a World ID app with a `register-device` action (developer.world.org; use a staging app with simulator.worldcoin.org). Set `WORLD_APP_ID`, `WORLD_RP_ID`, `WORLD_RP_SIGNING_KEY` and `WORLD_ENVIRONMENT=staging`, restart, and sign in.
 
 1. Open `/enroll`, enter the glasses' (or a simulated) device address and MAC.
 2. Approve the request in World App or the simulator.
