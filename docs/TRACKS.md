@@ -5,6 +5,7 @@ Odsy targets three sponsor tracks: **Arkiv**, **0G** and **World ID**. Each one 
 - Short version of the mapping: [README, Tracks](../README.md#tracks).
 - Full run-through with every command: [TESTING.md](../TESTING.md).
 - Design background: [odsy_provenance_network.md](odsy_provenance_network.md).
+- Exactly where the code uses each partner, line by line: [Arkiv](tracks/arkiv.md), [0G](tracks/0g.md), [World ID](tracks/world-id.md).
 
 ## The product in one picture
 
