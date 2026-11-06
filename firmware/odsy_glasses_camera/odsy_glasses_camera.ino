@@ -17,8 +17,12 @@
 #include "odsy_crypto.h"
 
 // ==================== 1. SETTINGS ====================
-const char* ssid     = "Odyssey";
-const char* password = "Odyssey!";
+// Tried in order at boot. If none connects, the glasses ask for a network over Serial
+// (laptop -> USB -> UART bridge ESP32 -> cam), 115200 baud, line ending "Newline".
+const char* WIFI_NETWORKS[][2] = {
+  {"AatifPhone", "thug4life"},
+  {"Ekas's iPhone", "treepsake777"},
+};
 
 // Your deployed app (https) or a local `next dev` (http://<laptop-ip>:3000/api/ingest).
 const char* ingestUrl = "https://odyssey-blush-seven.vercel.app/api/ingest";
@@ -188,7 +192,49 @@ void captureAndSend(camera_fb_t* fb) {
   delay(2000);  // keep the result readable
 }
 
-// ==================== 5. SETUP & LOOP ====================
+// ==================== 5. WI-FI ====================
+bool connectWifi(const char* ssid, const char* pass) {
+  char name[22];
+  snprintf(name, sizeof name, "%s", ssid);
+  screen("WI-FI", "Joining", name, "");
+  Serial.printf("Wi-Fi: trying \"%s\"\n", ssid);
+  WiFi.disconnect();
+  delay(100);
+  WiFi.begin(ssid, pass);
+  for (int i = 0; i < 25 && WiFi.status() != WL_CONNECTED; i++) delay(400);  // ~10 s
+  bool ok = WiFi.status() == WL_CONNECTED;
+  Serial.println(ok ? "Wi-Fi: connected" : "Wi-Fi: failed");
+  return ok;
+}
+
+// Blocks until a line arrives over Serial. Strips the line ending only, so spaces in passwords survive.
+String readSerialLine(const char* prompt) {
+  Serial.print(prompt);
+  while (!Serial.available()) delay(10);
+  String s = Serial.readStringUntil('\n');
+  if (s.endsWith("\r")) s.remove(s.length() - 1);
+  return s;
+}
+
+void setupWifi() {
+  WiFi.mode(WIFI_STA);
+  for (auto& net : WIFI_NETWORKS) {
+    if (connectWifi(net[0], net[1])) return;
+  }
+  // No known network: ask over the UART bridge until one connects.
+  while (true) {
+    screen("WI-FI SETUP", "No Wi-Fi", "Open Serial 115200", "Enter SSID+password");
+    Serial.println("\nNo known Wi-Fi found. Type the network below (Serial Monitor: 115200 baud, line ending Newline).");
+    String ssid = readSerialLine("SSID: ");
+    Serial.println(ssid);
+    String pass = readSerialLine("Password: ");
+    Serial.println("********");
+    if (connectWifi(ssid.c_str(), pass.c_str())) return;
+    Serial.println("Could not connect. Check the name and password and try again.");
+  }
+}
+
+// ==================== 6. SETUP & LOOP ====================
 String mac;
 
 void setup() {
@@ -200,17 +246,10 @@ void setup() {
   display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS, true, false);
   screen("ODYSSEY", "Welcome", "Proof of reality", "Connecting Wi-Fi...");
 
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
-  for (int i = 0; i < 25 && WiFi.status() != WL_CONNECTED; i++) delay(400);
-  configTime(0, 0, "pool.ntp.org", "time.google.com");  // capturedAt is signed unix time; syncs whenever Wi-Fi is up
-  if (WiFi.status() == WL_CONNECTED) {
-    screen("ODYSSEY", "Welcome", "Wi-Fi connected", "Syncing clock...");
-    for (int i = 0; i < 20 && time(nullptr) < 1700000000; i++) delay(500);
-  } else {
-    screen("ODYSSEY", "Welcome", "Wi-Fi not found", "Captures will fail");
-    delay(2000);
-  }
+  setupWifi();  // returns only once connected
+  configTime(0, 0, "pool.ntp.org", "time.google.com");  // capturedAt is signed unix time
+  screen("ODYSSEY", "Welcome", "Wi-Fi connected", "Syncing clock...");
+  for (int i = 0; i < 20 && time(nullptr) < 1700000000; i++) delay(500);
 
   screen("ODYSSEY", "Welcome", "Loading device key...", "");
   initDeviceKey();
