@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
 import { isHex, recoverMessageAddress } from "viem";
 import { parseSiweMessage, validateSiweMessage } from "viem/siwe";
-import { isAdmin, NONCE_COOKIE, startSession } from "@/lib/session";
+import { isAdmin } from "@/lib/admins";
+import { NONCE_COOKIE, startSession } from "@/lib/session";
 
 const fail = (error: string) => Response.json({ error }, { status: 401 });
 
@@ -21,5 +22,5 @@ export async function POST(req: Request) {
   if (signer?.toLowerCase() !== message.address.toLowerCase()) return fail("signature does not match the address");
 
   await startSession(message.address);
-  return Response.json({ address: message.address, admin: isAdmin(message.address) });
+  return Response.json({ address: message.address, admin: await isAdmin(message.address) });
 }

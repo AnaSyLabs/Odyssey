@@ -228,7 +228,7 @@ Metadata stays public so the geo index, search and signature checks work for any
 
 ### The app: sign-in, datasets, payments, transactions
 
-Wallet sign-in uses [Sign-In with Ethereum](https://eips.ethereum.org/EIPS/eip-4361) with any browser wallet such as MetaMask. The server checks the signed message's domain, nonce, expiry and signature, then sets a signed `httpOnly` session cookie for 7 days. Signing costs no gas. **Sign out** ends the session and also disconnects the site in the wallet (`wallet_revokePermissions`), so the next sign-in asks again. Wallets listed in `ADMIN_ADDRESSES` are admins.
+Wallet sign-in uses [Sign-In with Ethereum](https://eips.ethereum.org/EIPS/eip-4361) with any browser wallet such as MetaMask. The server checks the signed message's domain, nonce, expiry and signature, then sets a signed `httpOnly` session cookie for 7 days. Signing costs no gas. **Sign out** ends the session and also disconnects the site in the wallet (`wallet_revokePermissions`), so the next sign-in asks again. Wallets listed in `ADMIN_ADDRESSES` are root admins. Any admin can add or remove other admins on the **Admins** page (`/admin`): each grant is an `odsy.admins` entity written by the gateway (`admin`, `grantedBy`, `grantedAt`), so the list is public on Arkiv. Root admins can't be removed from the page, and nobody can remove their own wallet, so a bad grant can't lock everyone out. A change takes up to 10 seconds to apply on other server instances.
 
 The live pages (Datasets, the dataset map, Explore and Transactions) show a **sign-in overlay** until a wallet signs in, over a blurred placeholder page. Landing, Protocol docs, Capture device, Wiring and everything under `/mockups` stay open. While data loads from Arkiv, pages show **skeleton placeholders** in the shape of the content.
 
@@ -322,6 +322,7 @@ Runs are incremental. The cursor is `$expiresAt`: new and extended samples alway
 | `GET /api/samples/{key}/data` | Access | Decrypted payload as a file (inline or from 0G), hash-checked |
 | `GET /api/auth/nonce`, `POST /api/auth/verify`, `POST /api/auth/logout`, `GET /api/auth/me` | — | Sign-In with Ethereum session |
 | `GET /api/datasets` | Public | Datasets with sample counts and the viewer's access-until date |
+| `GET /api/admins`, `POST /api/admins`, `DELETE /api/admins?address=` | Admin | List admins (root and granted), make a wallet admin with `{address}`, or remove a granted one |
 | `POST /api/datasets`, `PATCH /api/datasets/{key}` | Admin | Create a dataset and list it on the contract, or list/unlist it with `{active}` |
 | `GET /api/subscriptions` | Signed in | Own payments from the contract's `Subscribed` events plus legacy Arkiv periods (admin: all) |
 | `GET /api/rewards` | Signed in | The wallet's reward per epoch with its Merkle proof and claimed state |

@@ -14,7 +14,7 @@ type Reward = { epoch: string; account: `0x${string}`; amount: string; amountDis
 type Event = { txHash: string; block: string; type: string; entityKey: string; schema?: string; label?: string };
 
 const KIND: Record<string, string> = {
-  "odsy.samples": "Sample", "odsy.devices": "Device", "odsy.datasets": "Dataset", "odsy.subscriptions": "Subscription",
+  "odsy.samples": "Sample", "odsy.devices": "Device", "odsy.datasets": "Dataset", "odsy.subscriptions": "Subscription", "odsy.admins": "Admin grant",
 };
 const ACTION: Record<string, string> = { EntityCreated: "created", EntityPatched: "updated", ExpiryExtended: "extended" };
 
