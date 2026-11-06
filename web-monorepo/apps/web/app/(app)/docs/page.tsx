@@ -9,6 +9,7 @@ const TOC = [
   ["live", "What's live today"],
   ["tracks", "Tracks"],
   ["access", "Access and payments"],
+  ["mcp", "Use it from an LLM (MCP)"],
   ["pipeline", "The pipeline"],
   ["sample", "What a sample proves"],
   ["validation", "Validation"],
@@ -206,6 +207,37 @@ export default function Docs() {
             <li><b>The app</b> asks for a wallet sign-in before Datasets, Explore, the dataset map and Transactions. Signing a message costs no gas; signing out also disconnects the site in the wallet.</li>
             <li><b>Lab ingest</b> (<Mono>npm run lab:ingest</Mono>) pulls subscribed datasets into the lab&apos;s own storage, re-checking every sample, with an option to keep only the samples the retention policy keeps.</li>
           </Ul>
+        </Section>
+
+        <Section id="mcp" title="Use it from an LLM (MCP)">
+          <P>
+            Subscribers can search and read their datasets from Claude, Cursor or any other MCP client. It is retrieval only: the
+            model you connect writes the answer, and it only sees what your wallet has paid for.
+          </P>
+          <Ol>
+            <li>Sign in on Datasets and click <b>Create token</b> in the &ldquo;Use your datasets in an AI tool&rdquo; card.</li>
+            <li>Paste the config it shows into your client. The token lasts 7 days.</li>
+            <li>Ask your model things like &ldquo;list my datasets&rdquo; or &ldquo;find samples that mention mangoes in the Bandra dataset&rdquo;.</li>
+          </Ol>
+          <Table
+            head={["Tool", "What it does"]}
+            rows={[
+              [<Mono key="m1">list_datasets</Mono>, "Your active subscriptions and when access ends"],
+              [<Mono key="m2">search_samples</Mono>, "Keyword search over the text and sensor samples of one dataset, best matches first, with a snippet, place, time and content hash"],
+              [<Mono key="m3">get_sample</Mono>, "One sample in full, decrypted, if a subscription covers it"],
+            ]}
+          />
+          <Code label="Claude Code">{`
+claude mcp add --transport http odyssey https://<your-host>/api/mcp \\
+  --header "Authorization: Bearer <token>"
+`}</Code>
+          <Note kind="warn" title="Limits of this first version">
+            <P>
+              Keyword search only (no embeddings), over the newest 100 text and sensor samples per query. Images, audio, video and
+              0G-stored payloads are not returned. Tokens expire after 7 days and cannot be revoked earlier. There is no OAuth, so
+              ChatGPT&apos;s connector screen cannot use it; the OpenAI API can, through an MCP tool with a header.
+            </P>
+          </Note>
         </Section>
 
         <Section id="pipeline" title="The pipeline">
