@@ -57,6 +57,46 @@ These are marked `shortcut:` in the code; each one is fine for a demo and must c
 - [ ] CI on push: `cargo test` (backend), `forge test` (contracts), `npm run lint && npm run build` (web).
 - [ ] An end-to-end test of the glasses flow (say, confirm, iris, 0G approve, relay) against a local chain.
 
+## 6. Arkiv data layer and subscriptions (`web-monorepo/apps/web`, `contracts/`)
+
+Testnets only (Arkiv Rabdi, 0G Galileo); mainnet is out of scope for the hackathon. Out of scope for this section and tracked elsewhere: glasses firmware and real GPS, the World ID registration page (another developer), automated reward publishing, treasury and split controls in the UI, and the contract audit.
+
+Done and confirmed live: device registration, signed and encrypted uploads, geo queries, wallet sign-in, dataset creation, lab ingest sign-in. Built and unit-tested but not yet run live: everything below that touches the contract.
+
+### Live testing (do first, in this order)
+
+- [ ] Fix the `GET /api/datasets` 500: read the error in the `npm run dev` terminal; usually a missing env var or an unreachable RPC.
+- [ ] Run `forge test -vv` and `npm test` on a machine where Foundry works (expect 14 passed, pass 13).
+- [ ] Deploy `OdsySubscriptions` to Galileo; set `SUBSCRIPTIONS_ADDRESS` and `SUBSCRIPTIONS_FROM_BLOCK`; check `owner()` and `contributorBps()`.
+- [ ] Create a dataset, confirm `setPrice` lands on-chain (no 502).
+- [ ] Subscribe as a lab from MetaMask; confirm `paidUntil` and unlocked payloads.
+- [ ] Run `lab:ingest` and check decrypted JSONL and files in `lab-data/`.
+- [ ] `rewards:publish --dry-run`, then publish epoch 1; claim from the payout wallet; confirm `AlreadyClaimed` on a second claim.
+- [ ] Upload a payload over 96 KiB to exercise 0G Storage, then download it through the lab ingest.
+- [ ] Open Activity as admin, lab and payout wallets; run `/api/cron/extend` once with the cron secret.
+
+### Deploy to Vercel
+
+- [ ] Root directory `web-monorepo/apps/web`, Node 22.x; add the 11 required env vars (see the setup guide).
+- [ ] Set `MAX_UPLOAD_BYTES` to about 3 MB (Vercel rejects bodies over 4.5 MB, and base64 adds a third).
+- [ ] Add `maxDuration` to the ingest and cron routes if logs show timeouts.
+- [ ] Point the simulator at the Vercel URL and run `npm run simulate -- 2`.
+
+### Demo polish
+
+- [ ] The `/mockups` screens (Analytics, mock datasets with the consensus map, My devices and Enroll) use fake data; wire them to Arkiv or label them clearly in the demo.
+- [ ] Record one clean run: device upload, dataset, paid subscription, lab pull, reward claim.
+
+### Known limits (marked `shortcut:` in the code)
+
+- [ ] One reward epoch holds about 2,000 leaves (one 128 KiB Arkiv entity); split an epoch across entities beyond that.
+- [ ] Datasets are fetched one page of 100, one RPC call per dataset; use multicall and paging.
+- [ ] `Subscribed` events are read with chunked `eth_getLogs`; index them into a table once the history is long.
+- [ ] The duplicate-upload check can race when two identical uploads land in one block.
+- [ ] `DATA_KEY` is a single secret with no rotation; losing it makes every stored sample unreadable. Back it up.
+- [ ] The reward split is computed off-chain by the owner; it is checkable from the public leaves but not enforced by the contract.
+- [ ] No CI or integration tests for this part; add `forge test` and `npm test` to CI.
+
 ## Working rules
 
 - Keep each commit under 1000 changed lines; split big changes by area.
