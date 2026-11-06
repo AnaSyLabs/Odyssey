@@ -82,6 +82,7 @@ python3 zoom.py
 node cards.mjs                                # placeholder cards for the live clips (02b, 06b)
 python3 voice.py                              # narration per section into vo/ (cached)
 python3 assemble.py                           # takes + cards + voice -> odyssey-demo-AI-VOICE.mp4, checked against 2:00-4:00
+node outro.mjs && python3 outro_join.py      # Odi outro: pops up, says thanks, then logo and links (~7 s)
 ```
 
 The narration that fits this cut is in [script.md](script.md). A full-length version (about 3:50, with the glasses and Claude clips) is in [script-4min.md](script-4min.md).
