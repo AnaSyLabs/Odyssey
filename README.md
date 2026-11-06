@@ -233,6 +233,7 @@ npx lighthouse http://localhost:3000/datasets --preset=desktop --view
 ├── firmware/      ESP32 glasses: `odsy_glasses_camera` (camera capture, secp256k1 device key, signed upload) plus mic, IR, IMU and OLED sketches
 ├── contracts/     Foundry: OdsySubscriptions (subscriptions + reward claims) and ConsensusRegistry (tile verdicts, two-strike ban)
 ├── docs/          Screenshots used in this README and the provenance design note (odsy_provenance_network.md)
+├── video/         Demo video plan: ETHGlobal rules, script, shot list, recording and export steps
 ├── .claude/       Agent skills (Solidity security, OpenZeppelin, token checks)
 ├── .cursor/       Cursor rules (Ponytail)
 ├── AGENTS.md      Rules for AI coding agents

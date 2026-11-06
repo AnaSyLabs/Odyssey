@@ -1,0 +1,7 @@
+# Raw takes and exports are too large for git; the final cut is uploaded and linked from README.md.
+*.mp4
+*.mov
+*.mkv
+*.webm
+*.wav
+*.m4a
