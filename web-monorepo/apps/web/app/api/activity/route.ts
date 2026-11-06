@@ -8,9 +8,11 @@ import { getSession, unauthorized } from "@/lib/session";
 
 // The Arkiv system contract every entity operation emits its events from (SDK consts, not exported).
 const ARKIV_ADDRESS = "0x4400000000000000000000000000000000000044";
-const CHUNK = 10_000n; // blocks per eth_getLogs call
-// shortcut: looks back at most ~7 days (2 s blocks); index events into a table if you need full history.
-const MAX_CHUNKS = 30;
+// The Rabdi RPC only serves eth_getLogs for roughly the latest 900 blocks (about 30 minutes at 2 s per block). Older
+// ranges fail with "segment_range_of(transactions): NotImplemented", so look back 800 blocks in small calls.
+// shortcut: recent writes only; index events into a table if you need history.
+const CHUNK = 200n;
+const MAX_CHUNKS = 4;
 const LIMIT = 50;
 
 type Event = { txHash: Hex; block: string; type: string; entityKey: Hex; schema?: string; label?: string };
@@ -35,7 +37,7 @@ async function label(events: Event[]) {
 }
 
 /**
- * Arkiv transactions. Admins: every recent entity the gateway created, patched or extended (samples, devices,
+ * Arkiv transactions from the last ~800 blocks. Admins: every recent entity the gateway created, patched or extended (samples, devices,
  * datasets, subscriptions). Labs: the Arkiv records of their own subscriptions (payments are listed by /api/subscriptions).
  */
 export async function GET() {
@@ -57,11 +59,17 @@ export async function GET() {
   for (let i = 0, to = latest; i < MAX_CHUNKS && events.length < LIMIT && to > 0n; i++, to -= CHUNK) {
     const range = { fromBlock: to > CHUNK ? to - CHUNK + 1n : 0n, toBlock: to };
     const args = { owner: gateway, ...(entityKeys && { entityKey: entityKeys }) };
-    const logs = (await Promise.all([
-      pub.getLogs({ address: ARKIV_ADDRESS, event: getAbiItem({ abi: ENTITY_EVENTS_ABI, name: "EntityCreated" }), args, ...range }),
-      pub.getLogs({ address: ARKIV_ADDRESS, event: getAbiItem({ abi: ENTITY_EVENTS_ABI, name: "EntityPatched" }), args, ...range }),
-      pub.getLogs({ address: ARKIV_ADDRESS, event: getAbiItem({ abi: ENTITY_EVENTS_ABI, name: "ExpiryExtended" }), args, ...range }),
-    ])).flat().sort((a, b) => Number((a.blockNumber ?? 0n) - (b.blockNumber ?? 0n)) || (a.logIndex ?? 0) - (b.logIndex ?? 0));
+    let logs;
+    try {
+      logs = (await Promise.all([
+        pub.getLogs({ address: ARKIV_ADDRESS, event: getAbiItem({ abi: ENTITY_EVENTS_ABI, name: "EntityCreated" }), args, ...range }),
+        pub.getLogs({ address: ARKIV_ADDRESS, event: getAbiItem({ abi: ENTITY_EVENTS_ABI, name: "EntityPatched" }), args, ...range }),
+        pub.getLogs({ address: ARKIV_ADDRESS, event: getAbiItem({ abi: ENTITY_EVENTS_ABI, name: "ExpiryExtended" }), args, ...range }),
+      ])).flat().sort((a, b) => Number((a.blockNumber ?? 0n) - (b.blockNumber ?? 0n)) || (a.logIndex ?? 0) - (b.logIndex ?? 0));
+    } catch (e) {
+      if (i === 0) throw e; // the newest range failing means the RPC is down, not just out of history
+      break; // older history is not served: return what we have
+    }
     for (const l of logs.reverse()) {
       const a = l.args as { entityKey?: Hex };
       if (a.entityKey && l.transactionHash) {
