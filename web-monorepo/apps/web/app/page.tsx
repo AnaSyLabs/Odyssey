@@ -75,7 +75,7 @@ export default function Landing() {
             <div className="absolute inset-0">
               <Glasses3D lesson={1} hudState="capturing" prompt="clip 10 s · gaze on" dark={dark} exploded={view === "Exploded"} lineup={view === "Lineup"} wireframe={view === "Wireframe"} />
             </div>
-            <div className="seg pod absolute left-4 top-4" role="group" aria-label="Model view">
+            <div className="seg pod absolute left-4 top-4 rounded-full p-1" role="group" aria-label="Model view">
               {VIEWS.map((v) => <button key={v} className={view === v ? "on" : ""} aria-pressed={view === v} onClick={() => setView(v)}>{v}</button>)}
             </div>
           </div>
