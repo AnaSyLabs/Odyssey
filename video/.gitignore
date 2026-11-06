@@ -5,3 +5,8 @@
 *.webm
 *.wav
 *.m4a
+tools/takes/
+tools/parts/
+tools/list.txt
+tools/node_modules/
+tools/package*.json

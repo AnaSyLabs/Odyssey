@@ -58,6 +58,19 @@ The video can only show what works. Owners in brackets; fill in names.
 - [ ] Create a token on `/datasets` as the lab wallet; connect Claude Desktop or Claude Code (README, *MCP server*)
 - [ ] Ask the take 6 question once and check the answer uses the new photo
 
+## Recorded footage
+
+The screen takes are recorded automatically from the production site (`odyssey-blush-seven.vercel.app`) at 1920×1080, with the intro skipped and a visible cursor. Signed-in pages are shown through the `/mockups` demo screens; the real proof comes from a JPEG the glasses uploaded to Arkiv and the two contracts on 0G Galileo.
+
+```bash
+cd video/tools
+npm i playwright-core@1.49.1   # uses your installed Chrome, downloads no browser
+node rec.mjs                    # all 8 takes into takes/; or e.g. node rec.mjs 4
+./cut.sh                        # trims loading screens, joins takes into silent-cut.mp4
+```
+
+The narration that fits this cut is in [script.md](script.md).
+
 ## Takes
 
 The words are in [script.md](script.md). About 3:10 in total; each take is recorded on its own.
