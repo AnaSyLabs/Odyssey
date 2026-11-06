@@ -218,7 +218,7 @@ export default function Docs() {
           </P>
           <Ol>
             <li>Sign in on Datasets and click <b>Create token</b> in the &ldquo;Use your datasets in an AI tool&rdquo; card.</li>
-            <li>Pick your client (Claude Code, Cursor, Claude Desktop or other) and paste the setup it shows. The server is hosted, so there is nothing to install or clone. The token lasts 7 days.</li>
+            <li>Pick your client (Claude Code, Cursor, Claude Desktop or other) and paste the setup it shows. The server is hosted, so there is nothing to install or clone, and Claude Code works without its command-line tool through a project <Mono>.mcp.json</Mono> and an <Mono>ODYSSEY_TOKEN</Mono> environment variable. The token lasts 7 days.</li>
             <li>Ask your model things like &ldquo;list my datasets&rdquo; or &ldquo;find samples that mention mangoes in the Bandra dataset&rdquo;.</li>
           </Ol>
           <Table

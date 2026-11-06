@@ -451,6 +451,14 @@ Connect a client:
 claude mcp add --transport http odyssey https://<your-host>/api/mcp --header "Authorization: Bearer <token>"
 ```
 
+No `claude` command installed (for example inside the desktop app)? Use the project file instead. This repo already has a token-free [`.mcp.json`](.mcp.json): export your token, then start Claude Code in the repo and approve the server.
+
+```bash
+export ODYSSEY_TOKEN=<token>
+# optional: point at your own deployment instead of the default
+export ODYSSEY_URL=https://<your-host>
+```
+
 ```json
 // Cursor: .cursor/mcp.json
 { "mcpServers": { "odyssey": { "url": "https://<your-host>/api/mcp", "headers": { "Authorization": "Bearer <token>" } } } }
