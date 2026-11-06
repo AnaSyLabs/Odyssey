@@ -2,11 +2,12 @@
 import { LuArrowUpRight, LuBadgeCheck, LuHexagon, LuLock, LuLockOpen, LuPlus, LuSearch } from "react-icons/lu";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { Hex } from "viem";
+import { encodeFunctionData, type Hex } from "viem";
 import { CardsSkeleton, Loading, RowsSkeleton } from "@/components/Skeleton";
 import { errorText, useWallet } from "@/components/wallet";
 import { ogTxUrl } from "@/lib/chains";
 import { short } from "@/lib/data";
+import { subscriptionsAbi } from "@/lib/subscriptions-abi";
 
 type Dataset = {
   key: Hex; name: string; description: string; lat: number; lon: number; radiusM: number; kind: string; deviceType: string;
@@ -123,35 +124,31 @@ function Detail({ d, reload }: { d: Dataset; reload: () => Promise<void> }) {
   const [step, setStep] = useState<string>();
   const [tx, setTx] = useState<Hex>();
   const [error, setError] = useState<string>();
-  const [claim, setClaim] = useState("");
   const busy = !!step && step !== "done";
 
   useEffect(() => {
     fetch(`/api/samples?dataset=${d.key}&limit=8`).then((r) => r.json()).then((b) => setPreview(b.samples ?? [])).catch(() => setPreview([]));
   }, [d.key, d.paidUntil]);
 
-  // Records a mined payment; retries while 0G hasn't mined it yet. Safe to repeat: a used tx is rejected.
-  const record = async (hash: Hex) => {
-    setStep("Waiting for 0G Galileo to confirm the payment…");
-    for (let i = 0; i < 40; i++) {
-      const { res, body } = await postJson("/api/subscriptions", { dataset: d.key, txHash: hash });
-      if (res.status === 425) { await sleep(3000); continue; }
-      if (!res.ok) throw new Error(body.error ?? `failed (${res.status})`);
-      setStep("done");
-      await reload();
-      return;
-    }
-    throw new Error("Payment not confirmed after 2 minutes. Use “Already paid?” below with the transaction hash to finish.");
-  };
-
+  // The contract records access in the same transaction; wait until the gateway sees the new paid-until.
   const subscribe = async () => {
     setError(undefined);
     try {
       setStep("Confirm the payment in your wallet…");
-      const { treasury } = await fetch("/api/config").then((r) => r.json());
-      const hash = await pay(treasury, BigInt(d.price), d.key);
+      const { contract } = await fetch("/api/config").then((r) => r.json());
+      const hash = await pay(contract, BigInt(d.price), encodeFunctionData({ abi: subscriptionsAbi, functionName: "subscribe", args: [d.key] }));
       setTx(hash);
-      await record(hash);
+      setStep("Waiting for 0G Galileo to confirm the payment…");
+      for (let i = 0; i < 40; i++) {
+        await sleep(3000);
+        const now = (await fetchDatasets()).list?.find((x) => x.key === d.key);
+        if (now?.paidUntil && now.paidUntil > (d.paidUntil ?? 0)) {
+          setStep("done");
+          await reload();
+          return;
+        }
+      }
+      throw new Error("Payment sent, but access hasn't shown up after 2 minutes. Check the payment link below, then refresh.");
     } catch (e) {
       setError(errorText(e));
       setStep(undefined);
@@ -214,20 +211,6 @@ function Detail({ d, reload }: { d: Dataset; reload: () => Promise<void> }) {
         {step === "done" && <p className="text-sm text-[var(--st-phosphor)]" role="status">Subscribed. Samples in this dataset now decrypt for your wallet.</p>}
         {tx && <a className="block truncate text-xs text-[var(--st-cyan)] hover:underline" href={ogTxUrl(tx)} target="_blank" rel="noreferrer">Payment tx {short(tx)} ↗</a>}
         {error && <p className="text-xs text-[var(--st-crimson)]" role="alert">{error}</p>}
-
-        {session && (
-          <details className="acc">
-            <summary className="text-xs">Already paid? Finish with the transaction hash</summary>
-            <form className="flex gap-2 px-3 pb-3" onSubmit={async (e) => {
-              e.preventDefault();
-              setError(undefined);
-              try { await record(claim.trim() as Hex); } catch (err) { setError(errorText(err)); setStep(undefined); }
-            }}>
-              <input className="field" placeholder="0x… (0G Galileo tx)" value={claim} onChange={(e) => setClaim(e.target.value)} aria-label="Payment transaction hash" />
-              <button className="btn" disabled={busy || !/^0x[0-9a-fA-F]{64}$/.test(claim.trim())}>Record</button>
-            </form>
-          </details>
-        )}
 
         {d.paidUntil && (
           <details className="acc">
