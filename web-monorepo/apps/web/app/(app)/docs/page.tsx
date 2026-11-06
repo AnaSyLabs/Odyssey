@@ -7,6 +7,7 @@ export const metadata: Metadata = { title: "Protocol · Odyssey" };
 const TOC = [
   ["overview", "Overview"],
   ["live", "What's live today"],
+  ["tracks", "Tracks"],
   ["access", "Access and payments"],
   ["pipeline", "The pipeline"],
   ["sample", "What a sample proves"],
@@ -127,6 +128,52 @@ export default function Docs() {
               storage.
             </P>
           </Note>
+        </Section>
+
+        <Section id="tracks" title="Tracks">
+          <P>How the project maps to the sponsor tracks it targets: what is built, where, and where it stands.</P>
+          <H3>Arkiv · the data layer</H3>
+          <Table
+            head={["What we built", "Where", "Status"]}
+            rows={[
+              ["Every sample is a readonly Arkiv entity: metadata, geohash, signature, encrypted payload up to 96 KiB", <Mono key="a1">lib/schema.ts</Mono>, "Live-tested"],
+              ["Device registry, datasets, paid periods and reward epochs as gateway-owned entities", <Mono key="a2">app/api/*</Mono>, "Registry and datasets live-tested; rewards not yet run live"],
+              ["Geo search on a geohash index", <Mono key="a3">lib/query.ts</Mono>, "Live-tested"],
+              ["Retention job: extend what is worth keeping, let the rest and banned data expire", <Mono key="a4">app/api/cron/extend</Mono>, "Built, not scheduled yet"],
+            ]}
+          />
+          <H3>0G · payments, contracts and storage</H3>
+          <Table
+            head={["What we built", "Where", "Status"]}
+            rows={[
+              ["OdsySubscriptions on Galileo: 30-day dataset access paid in 0G, 70 % to contributors, Merkle reward claims", <Mono key="g1">contracts/src/OdsySubscriptions.sol</Mono>, "Deployed, 14 tests; subscribe and claim not yet confirmed end to end"],
+              ["ConsensusRegistry on Galileo: validator median per hex tile, two-strike ban", <Mono key="g2">contracts/src/ConsensusRegistry.sol</Mono>, "Deployed, 10 tests, hand-run live"],
+              ["0G Storage for payloads over 96 KiB", <Mono key="g3">lib/og.ts</Mono>, "Built, not yet confirmed with a large payload"],
+            ]}
+          />
+          <H3>World ID · one human, one device</H3>
+          <Table
+            head={["What we built", "Where", "Status"]}
+            rows={[
+              ["A device key bound to a World ID nullifier, one device per human", <Mono key="w1">app/api/devices</Mono>, "Built; the proof is checked by a separate registration page"],
+              ["Every sample carries the World ID that captured it", <Mono key="w2">Samples.worldId</Mono>, "Live"],
+              ["Two provable strikes ban a World ID: no uploads, no new device, data unreadable", <Mono key="w3">lib/consensus.ts</Mono>, "Contract run live; gateway path not yet end to end"],
+            ]}
+          />
+          <Note kind="warn" title="Not built">
+            <P>
+              World ID proof verification is not done in this app; <Mono>POST /api/devices</Mono> trusts the registration page. The
+              enrollment screen under /mockups is a demo of the flow.
+            </P>
+          </Note>
+          <H3>Deployed contracts (0G Galileo testnet)</H3>
+          <Table
+            head={["Contract", "Address"]}
+            rows={[
+              ["OdsySubscriptions", <a key="d1" className="underline" href="https://chainscan-galileo.0g.ai/address/0xc3a946516f2f0CE3fc2065543cb0a8E9b105A54e"><Mono>0xc3a946516f2f0CE3fc2065543cb0a8E9b105A54e</Mono></a>],
+              ["ConsensusRegistry", <a key="d2" className="underline" href="https://chainscan-galileo.0g.ai/address/0x83bea227e5D2C72f8F0F73E63175759D4E6055DC"><Mono>0x83bea227e5D2C72f8F0F73E63175759D4E6055DC</Mono></a>],
+            ]}
+          />
         </Section>
 
         <Section id="access" title="Access and payments">
