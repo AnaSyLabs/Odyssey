@@ -12,6 +12,7 @@ const NAV = [
   ["/datasets", "Datasets", LuDatabase],
   ["/explore", "Explore samples", LuMapPinned],
   ["/activity", "Transactions", LuReceipt],
+  ["/analytics", "Analytics", LuChartNoAxesColumn],
   ["/admin", "Admins", LuShieldCheck],
   ["/device", "Capture device", LuBox],
   ["/enroll", "Enroll device", LuShieldCheck],
@@ -26,7 +27,7 @@ const NAV = [
   ["/mockups", "Mockups", LuLayers],
 ] as const;
 // Pages backed by the gateway; everything else (landing, docs, device, wiring, /mockups) stays open.
-const LIVE = ["/datasets", "/explore", "/activity", "/admin", "/enroll", "/capture"];
+const LIVE = ["/datasets", "/explore", "/activity", "/analytics", "/admin", "/enroll", "/capture"];
 
 // The dataset map route has a request-time param, so the shell reads usePathname() inside Suspense (Cache Components).
 export default function AppLayout({ children }: { children: React.ReactNode }) {
