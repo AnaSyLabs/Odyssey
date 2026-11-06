@@ -102,6 +102,19 @@ For a walk through one track at a time, with diagrams and a demo path for each, 
 
 See it: TESTING.md part 2, steps 2 to 4. Explore shows samples on the map straight from Arkiv.
 
+**Wallet that wrote our entities** (Rabdi testnet): `0x51f18a28F4C17121770782aC95B9baAf6257053a`, the gateway. All reads filter on this owner.
+
+**A query to run** (returns our samples; full snippet in [arkiv/schema.md](arkiv/schema.md)):
+
+```ts
+pub.select({ $key: true, kind: true, geohash: true, capturedAt: true })
+  .where(eq("arkiv.schema", "odsy.samples"))
+  .ownedBy("0x51f18a28F4C17121770782aC95B9baAf6257053a")
+  .limit(100).fetch();
+```
+
+Arkiv track docs: [schema](arkiv/schema.md) · [friction](arkiv/friction.md) · [reach](arkiv/reach.md) · [why Arkiv](arkiv/why-arkiv.md) · [how we use Arkiv](arkiv/how-you-use-arkiv.md)
+
 ### 0G: payments, contracts and storage
 
 | What we built | Where | Status |
