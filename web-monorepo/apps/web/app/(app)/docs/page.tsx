@@ -16,6 +16,7 @@ const TOC = [
   ["consensus", "Checking a neighbourhood"],
   ["stake", "Stake and slash"],
   ["rewards", "Rewards and cash flow"],
+  ["track-guide", "Track guide"],
   ["scale", "Why it scales"],
   ["privacy", "Privacy and consent"],
   ["roadmap", "Roadmap"],
@@ -450,6 +451,83 @@ reward = base × quality score × rarity
 # rarity rewards under-covered places, activities and languages
 # today: pro rata by sample count, no quality score or rarity yet
 `}</Code>
+        </Section>
+
+        <Section id="track-guide" title="Track guide">
+          <P>One track at a time: what to open or run to see it, and what is not confirmed yet. The full step list is TESTING.md in the repo.</P>
+
+          <H3>Arkiv · the data layer</H3>
+          <Sequence n={6} title="A sample's way into Arkiv"
+            actors={[
+              { id: "dev", label: "Glasses", tech: "device key" },
+              { id: "app", label: "Gateway", tech: "/api/ingest" },
+              { id: "og", label: "0G Storage", tech: "Galileo" },
+              { id: "ark", label: "Arkiv", tech: "Rabdi" },
+            ]}
+            steps={[
+              { section: "1 · SEND" },
+              { from: "dev", to: "app", label: "signed capture + payload" },
+              { self: "app", label: "signature · registered · hash unique · not banned" },
+              { section: "2 · STORE" },
+              { from: "app", to: "ark", label: "readonly entity, payload up to 96 KiB" },
+              { from: "app", to: "og", label: "payload over 96 KiB" },
+              { from: "og", to: "app", label: "root, kept on the Arkiv entity", reply: true },
+              { section: "3 · FIND" },
+              { from: "app", to: "ark", label: "geohash query for /explore" },
+              { from: "ark", to: "app", label: "matching entities", reply: true },
+            ]}
+          />
+          <Ol>
+            <li>Run <Mono>npm run simulate -- 5</Mono> to send five signed samples.</li>
+            <li>Open <Mono>/explore</Mono> and search 19.0596, 72.8295 with a 1 km radius. The samples appear on the map, straight from Arkiv.</li>
+            <li>As an admin, <Mono>/activity</Mono> lists the recent Arkiv writes with transaction links (the RPC only serves about the last 25 minutes).</li>
+          </Ol>
+
+          <H3>0G · payments, contracts and storage</H3>
+          <P>The money is Figures 2 and 5, and consensus is Figure 4. To see it:</P>
+          <Ol>
+            <li>As admin, create a dataset on <Mono>/datasets</Mono>. Listing it sets its price on the contract.</li>
+            <li>As a lab wallet, subscribe with 0.01 0G. Payloads unlock and <Mono>/activity</Mono> shows 0.007 0G to contributors.</li>
+            <li>Run <Mono>npm run rewards:publish</Mono>, then sign in as the payout wallet and press Claim on <Mono>/activity</Mono>. A second claim reverts with <Mono>AlreadyClaimed</Mono>.</li>
+            <li><Mono>/analytics</Mono> shows the same money as earnings per epoch and spend per dataset.</li>
+            <li>Consensus has no screen yet: drive it by hand with <Mono>cast</Mono> (TESTING.md part 3).</li>
+          </Ol>
+
+          <H3>World ID · one human, one device</H3>
+          <Sequence n={7} title="Enrolling a device"
+            actors={[
+              { id: "human", label: "Human", tech: "World App" },
+              { id: "app", label: "Gateway", tech: "/api/enroll" },
+              { id: "wid", label: "World ID", tech: "developer portal" },
+              { id: "ark", label: "Arkiv", tech: "Rabdi" },
+            ]}
+            steps={[
+              { section: "1 · REQUEST" },
+              { from: "human", to: "app", label: "device address + MAC" },
+              { from: "app", to: "human", label: "RP-signed request, signal = device", reply: true },
+              { section: "2 · PROVE" },
+              { from: "human", to: "wid", label: "approve in World App" },
+              { from: "wid", to: "human", label: "proof + nullifier", reply: true },
+              { from: "human", to: "app", label: "proof" },
+              { section: "3 · REGISTER" },
+              { from: "app", to: "wid", label: "verify proof" },
+              { self: "app", label: "signal is this device · nullifier unused · not banned" },
+              { from: "app", to: "ark", label: "register device, payout = your wallet" },
+            ]}
+          />
+          <Ol>
+            <li>Set the World ID variables (a staging app works with <Mono>simulator.worldcoin.org</Mono>), then open <Mono>/enroll</Mono>.</li>
+            <li>Enter a device address and MAC and approve in World App or the simulator. The device appears on <Mono>/capture</Mono> with your wallet as its payout.</li>
+            <li>Enroll the same device again (<Mono>409 already registered</Mono>), or use the same human for a second device (<Mono>409 already has a device</Mono>).</li>
+            <li>After a ban (TESTING.md part 3c), enrolling returns <Mono>403</Mono>. Two provable strikes ban a World ID; being outvoted never counts.</li>
+          </Ol>
+
+          <Note kind="warn" title="Not confirmed end to end yet">
+            <P>
+              Subscribe and claim, a payload over 96 KiB on 0G Storage, and World ID enrollment are built but not yet confirmed on
+              testnet. Validators are unstaked and tile verdicts do not gate payouts: rewards follow subscriptions only.
+            </P>
+          </Note>
         </Section>
 
         <Section id="scale" title="Why it scales">
