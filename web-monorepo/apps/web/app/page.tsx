@@ -42,7 +42,7 @@ const ROLES = [
   [LuBot, "AI labs", "License datasets with a provenance proof per sample and consent that travels with the data."],
 ] as const;
 
-const VIEWS = ["Interactive", "Exploded", "Wireframe"] as const;
+const VIEWS = ["Interactive", "Exploded", "Lineup", "Wireframe"] as const;
 
 export default function Landing() {
   const dark = useDark();
@@ -81,7 +81,7 @@ export default function Landing() {
             <div className="stage-grid pointer-events-none absolute inset-0" />
             <div className="pointer-events-none absolute -top-24 left-1/4 size-96 rounded-full bg-[var(--st-cyan)] opacity-[0.08] blur-3xl" />
             <div className="absolute inset-0">
-              <Glasses3D lesson={1} hudState="capturing" prompt="clip 10 s · gaze on" dark={dark} exploded={view === "Exploded"} wireframe={view === "Wireframe"} />
+              <Glasses3D lesson={1} hudState="capturing" prompt="clip 10 s · gaze on" dark={dark} exploded={view === "Exploded"} lineup={view === "Lineup"} wireframe={view === "Wireframe"} />
             </div>
             <div className="seg pod absolute left-4 top-4" role="group" aria-label="Model view">
               {VIEWS.map((v) => <button key={v} className={view === v ? "on" : ""} aria-pressed={view === v} onClick={() => setView(v)}>{v}</button>)}
