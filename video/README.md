@@ -23,33 +23,57 @@ From [ETHGlobal Mumbai: rules, project submission and judging](https://ethglobal
 
 The same story is the 4-minute demo in the finalist session (4 min demo + 3 min Q&A), so recording this is also the rehearsal.
 
+## Decisions
+
+- **Filmed on the live Vercel site**, not localhost.
+- **Real glasses** for the capture shot, filmed with a laptop webcam or a camera (not a phone).
+- **World ID enrollment done live**, including a second device being refused.
+- **Highlight: Claude answering from our data over MCP** (take 6).
+
 ## Before recording
 
-The video can only show what works. These are open in [PLAN.md](../PLAN.md) section 1; do them first.
+The video can only show what works. Owners in brackets; fill in names.
 
-- [ ] Turn off Vercel Deployment Protection so the live link opens for judges
-- [ ] Set `SUBSCRIPTIONS_ADDRESS` and `SUBSCRIPTIONS_FROM_BLOCK` on Vercel and redeploy (signed-in pages fail without them)
-- [ ] Run once, end to end, with [TESTING.md](../TESTING.md): subscribe with 0G, publish reward epoch 1 and claim it, enroll a device with World ID (staging simulator)
-- [ ] One dataset around Bandra with 10+ samples
-- [ ] Test wallets funded: lab, payout, admin
-- [ ] Glasses charged and uploading, or `npm run simulate` ready (if we use the simulator, say so on camera)
+**Vercel (needs the project owner's account)**
+- [ ] Turn off Deployment Protection, so the live link opens for judges
+- [ ] Set `SUBSCRIPTIONS_ADDRESS`, `SUBSCRIPTIONS_FROM_BLOCK` and `CONSENSUS_ADDRESS`, then redeploy (signed-in pages fail without them)
 
-## Script and shot list (about 3:00)
+**World ID ([name])**
+- [ ] At developer.world.org: create a **staging** app and a `register-device` action
+- [ ] Set `WORLD_APP_ID`, `WORLD_RP_ID`, `WORLD_RP_SIGNING_KEY` and `WORLD_ENVIRONMENT=staging` locally and on Vercel
+- [ ] Enroll once through simulator.worldcoin.org, and try a second device with the same identity to see the refusal
 
-About 450 spoken words. Each row is recorded as its own take.
+**Glasses ([name])**
+- [ ] Firmware flashed, Wi-Fi set, pointed at the Vercel URL, charged
+- [ ] One capture uploads and shows on `/capture`
 
-| # | Time | Screen | Say (roughly) | Track |
-|---|---|---|---|---|
-| 1 | 0:00–0:15 | Landing page, 3D glasses in the Lineup view | "AI is running out of internet. Robots need real first-person data, but labs can't tell real from fake, and the people who capture it aren't paid. Odyssey fixes that." | |
-| 2 | 0:15–0:40 | The glasses capturing (or the simulator), then `/device` | "Our glasses sign every capture with a key that never leaves the device. Here's a photo going up, signed at the sensor." | |
-| 3 | 0:40–1:05 | `/enroll`: device address, World ID approval, the Arkiv receipt | "One human, one device. World ID proves I'm a unique person without revealing who, and binds me to these glasses. A second device for me is refused." | World |
-| 4 | 1:05–1:30 | `/explore`: the sample on the map; open it, show signature, hash and its Arkiv entity | "Every sample is an encrypted Arkiv entity with its location, signature and content hash. Anyone can check it; only paying labs can decrypt it." | Arkiv |
-| 5 | 1:30–2:05 | `/datasets`: Bandra dataset, subscribe with 0G in the wallet, the payment on the Galileo explorer, the sample decrypts | "A lab subscribes to an area for 30 days in 0G through our subscriptions contract. 70 % goes to contributors. As soon as it confirms, the samples decrypt." | 0G |
-| 6 | 2:05–2:25 | Terminal: `npm run lab:ingest`, or Claude querying the dataset over MCP | "Labs pull it straight into their own storage, checking every signature, or query it from an AI tool over MCP." | Arkiv |
-| 7 | 2:25–2:45 | A replayed sample rejected with 403; `ConsensusRegistry` on the explorer | "Cheaters get caught: a replayed sample is a strike, and two strikes ban the World ID, on-chain." | 0G |
-| 8 | 2:45–3:00 | `/analytics` contributor view, claim a reward, end on the repo and contract addresses | "And contributors claim their share. Real-world data, signed at the sensor, owned by the people who capture it." | |
+**0G flows ([name])**, with [TESTING.md](../TESTING.md)
+- [ ] Wallets funded with Galileo 0G: lab, payout, admin
+- [ ] Bandra dataset exists with 10+ samples
+- [ ] Subscribe once as the lab; the sample unlocks
+- [ ] Publish reward epoch 1 (`npm run rewards:publish`); claim it from the payout wallet
+- [ ] Ban flow once (TESTING.md part 3), using a second World ID
 
-If it runs long, shorten 6 or 7 first.
+**MCP ([name])**
+- [ ] Create a token on `/datasets` as the lab wallet; connect Claude Desktop or Claude Code (README, *MCP server*)
+- [ ] Ask the take 6 question once and check the answer uses the new photo
+
+## Takes
+
+The words are in [script.md](script.md). About 3:10 in total; each take is recorded on its own.
+
+| # | Time | Screen | Track |
+|---|---|---|---|
+| 1 | 0:00–0:15 | Landing page, 3D glasses into the Lineup view | |
+| 2 | 0:15–0:45 | Real glasses capture (camera), then the photo on `/capture` | |
+| 3 | 0:45–1:15 | `/enroll` with World ID, then a second device refused | World |
+| 4 | 1:15–1:35 | `/explore`: the photo's proof and its Arkiv entity | Arkiv |
+| 5 | 1:35–2:05 | `/datasets`: subscribe with 0G, payment on the explorer, sample unlocks | 0G |
+| 6 | 2:05–2:40 | Claude answers a question from the dataset over MCP | Arkiv |
+| 7 | 2:40–2:55 | Replayed photo: strike, ban on `ConsensusRegistry`, upload refused | 0G |
+| 8 | 2:55–3:10 | Contributor claims the reward; end on repo and contract addresses | 0G |
+
+If it runs long, trim take 7, then take 4.
 
 ## Recording
 
