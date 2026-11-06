@@ -143,7 +143,7 @@ body { background: #f6f3ea; }
   --st-bright: #525252;
   --st-on: #f4f4f4;
   --st-on-var: #a6a6a6;
-  --st-outline: #7c7c7c;
+  --st-outline: #a0a0a0; /* 4.5:1 on --st-0..--st-2 for 10px eyebrow text */
   --st-line: rgba(255, 255, 255, 0.07);
   --st-edge: rgba(255, 255, 255, 0.1);
   --st-pod: rgba(28, 28, 28, 0.92);
@@ -173,7 +173,7 @@ body { background: #f6f3ea; }
   --st-bright: #d4d4d4;
   --st-on: #141414;
   --st-on-var: #525252;
-  --st-outline: #737373;
+  --st-outline: #666666;
   --st-line: rgba(20, 20, 20, 0.08);
   --st-edge: rgba(255, 255, 255, 0.9);
   --st-pod: rgba(255, 255, 255, 0.92);
