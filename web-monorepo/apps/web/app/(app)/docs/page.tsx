@@ -431,6 +431,13 @@ claude mcp add --transport http odyssey https://<your-host>/api/mcp \\
               ["Withdraw", "Owner", "Moves the treasury balance only"],
             ]}
           />
+          <Note title="See your own numbers">
+            <P>
+              The <Mono>/analytics</Mono> page shows them live, in 0G: a contributor wallet&apos;s earnings per reward epoch and what is
+              claimable, a lab wallet&apos;s spend per month and dataset, and for admins the revenue split between contributors and
+              the treasury. There are no dollar figures on a testnet.
+            </P>
+          </Note>
           <Note title="Worked example">
             <P>
               A lab pays 0.01 0G. 0.007 goes to the contributor pool and 0.003 to the treasury. The dataset has samples from three
