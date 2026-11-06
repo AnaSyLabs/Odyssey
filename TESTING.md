@@ -33,7 +33,7 @@ openssl rand -hex 16   # REGISTRAR_TOKEN and again for CRON_SECRET
 
 ```bash
 cd contracts && forge test            # expect 24 passed: 14 subscriptions + 10 consensus
-cd ../web-monorepo && npm test        # expect pass 13, fail 0
+cd ../web-monorepo && npm test        # expect pass 22, fail 0
 npm run build                         # compiles, lists /mockups and the live routes
 ```
 
