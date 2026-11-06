@@ -174,6 +174,7 @@ A Next.js app and gateway in `web-monorepo/apps/web`. Live pages talk to Arkiv a
 | `/datasets`, `/datasets/{key}` | Dataset marketplace, paid subscriptions, sample hex map | live, wallet sign-in |
 | `/explore` | Search samples by place on a map | live, wallet sign-in |
 | `/activity` | Transactions, payments and contributor rewards | live, wallet sign-in |
+| `/analytics` | Earnings per reward epoch (contributor), spend per month and dataset (lab), revenue split (admins) | live, wallet sign-in |
 | `/enroll` | Enroll glasses to a World ID and a payout wallet | live, wallet sign-in |
 | `/capture` | A device's captures with signature and content-hash checks | live, wallet sign-in |
 | `/admin` | List, grant and revoke admins | live, admin only |
@@ -182,7 +183,7 @@ A Next.js app and gateway in `web-monorepo/apps/web`. Live pages talk to Arkiv a
 | `/docs` | Protocol docs | static |
 | `/mockups` | Index of the demo screens below | demo |
 | `/mockups/datasets` | Validator-consensus hex map | demo |
-| `/mockups/analytics` | Contributor earnings and company spend | demo |
+| `/mockups/analytics` | The original static design of the analytics screen (fake figures and dollars) | demo |
 | `/mockups/devices` · `/mockups/enroll` | Registered devices and the enrollment flow | demo |
 
 | Wiring & firmware | Datasets (mockup) | Analytics (mockup) |
@@ -362,7 +363,7 @@ Runs are incremental. The cursor is `$expiresAt`: new and extended samples alway
 | `GET /api/datasets` | Public | Datasets with sample counts and the viewer's access-until date |
 | `GET /api/admins`, `POST /api/admins`, `DELETE /api/admins?address=` | Admin | List admins (root and granted), make a wallet admin with `{address}`, or remove a granted one |
 | `POST /api/datasets`, `PATCH /api/datasets/{key}` | Admin | Create a dataset and list it on the contract, or list/unlist it with `{active}` |
-| `GET /api/subscriptions` | Signed in | Own payments from the contract's `Subscribed` events plus legacy Arkiv periods (admin: all) |
+| `GET /api/subscriptions` | Signed in | Own payments from the contract's `Subscribed` events (each with its block time, `paidAt`) plus legacy Arkiv periods (admin: all) |
 | `GET /api/rewards` | Signed in | The wallet's reward per epoch with its Merkle proof and claimed state |
 | `POST /api/keys` | Signed in | `{keys: [...]}` → per-sample decryption keys the wallet is entitled to |
 | `GET /api/activity` | Signed in | Recent Arkiv writes with tx hashes (admin: all; lab: own subscriptions). Only the last ~800 blocks (about 25 minutes), because the Arkiv RPC serves logs only for recent blocks |
@@ -421,6 +422,7 @@ node -e "import('viem/accounts').then(a=>{const k=a.generatePrivateKey();console
 - **The paywall covers payloads, not metadata.** Location, time, device, MAC and World ID are public on Arkiv by design, because they power the geo index. A subscriber who saves the keys or data keeps them after the subscription ends.
 - **The contract owner is trusted with rewards.** Payments and access are enforced on-chain. The reward split is computed off-chain, though, and the owner key publishes the roots. A wrong root can misdirect up to that epoch's total, but never the treasury or other epochs. There are no refunds. Only externally owned wallets can sign in, not smart-contract wallets.
 - **The contracts aren't audited.** They're tested (24 Foundry tests: 14 for subscriptions, including fuzz and reentrancy cases, and 10 for consensus). Run the repo's `solidity-auditor` skill and an external review before any real money.
+- **Analytics shows what the contracts record, in 0G.** There is no dollar price on a testnet, and no quality score or pass rate, because consensus verdicts do not drive payouts yet. Contributor totals only cover published reward epochs, and payments from before the contract have no timestamp, so they are left out of the charts.
 - **Mockups live under `/mockups`** and show demo data only: `/mockups/datasets` (the validator-consensus hex map), `/mockups/analytics`, `/mockups/devices` and `/mockups/enroll`. They are marked "mockup" in the nav and top bar. The live routes are `/datasets`, `/datasets/{key}`, `/explore`, `/activity`, `/enroll`, `/capture`, `/admin` and `/api/*`.
 - **Explorer links** assume `/tx/<hash>` paths on chainscan-galileo.0g.ai and rabdi.explorer.arkiv.network.
 - **Device keys are only as safe as the device.** Real glasses need the key in a secure element (ATECC608A) or ESP32 flash encryption. A key in plain NVS can be copied.

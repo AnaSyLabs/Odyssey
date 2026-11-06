@@ -64,7 +64,8 @@ Steps are in [TESTING.md](TESTING.md).
 ## 6. Demo polish
 
 - [ ] Wire the `/mockups` screens to real data, or keep them clearly labelled.
-- [ ] Retake the README screenshots for the live pages.
+- [ ] Retake the README screenshots for the live pages, including `/analytics`.
+- [ ] Analytics follow-ups: samples per device for contributors, a dollar view once there is a price feed, quality and pass-rate figures once consensus drives payouts.
 - [ ] Record one clean run: device upload, dataset, paid subscription, lab pull, reward claim, a ban.
 
 ## 7. Known limits (marked `shortcut:` in the code)
