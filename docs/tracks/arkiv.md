@@ -19,6 +19,19 @@ Code links point at commit `4c4aa82` so the line numbers stay right.
 | Retention | A daily job extends only the samples worth keeping (one per device, cell and time window) and lets the rest and banned data expire | [`cron/extend/route.ts:29`](https://github.com/AnaSyLabs/Odyssey/blob/4c4aa82961f61a6da434d7895f5f10e2f3605d89/web-monorepo/apps/web/app/api/cron/extend/route.ts#L29), [`retention.ts:11`](https://github.com/AnaSyLabs/Odyssey/blob/4c4aa82961f61a6da434d7895f5f10e2f3605d89/web-monorepo/apps/web/lib/retention.ts#L11) |
 | AI access | The MCP server's `list_datasets`, `search_samples` and `get_sample` tools read the same Arkiv entities | [`mcp.ts:37`](https://github.com/AnaSyLabs/Odyssey/blob/4c4aa82961f61a6da434d7895f5f10e2f3605d89/web-monorepo/apps/web/lib/mcp.ts#L37) |
 
+## Prize: Build on Arkiv
+
+| Arkiv requires | Where |
+|---|---|
+| Writes to the current testnet with `@arkiv-network/sdk`, and a user-facing feature reads from Arkiv | The table above; `/explore` and the MCP tools read straight from Arkiv |
+| Writer wallet and one query to run, in the README | [README, Arkiv](../../README.md#arkiv-the-data-layer): gateway `0x51f18a28F4C17121770782aC95B9baAf6257053a` and a sample query |
+| Entities, queried fields, owners, expiry | [arkiv/schema.md](../../arkiv/schema.md) |
+| Arkiv feedback (25 %) | [arkiv/friction.md](../../arkiv/friction.md) |
+| Reach (25 %) | [arkiv/reach.md](../../arkiv/reach.md) |
+| Why Arkiv (25 %) | [arkiv/why-arkiv.md](../../arkiv/why-arkiv.md) |
+| How we use Arkiv (25 %) | [arkiv/how-you-use-arkiv.md](../../arkiv/how-you-use-arkiv.md) |
+| Open-source license and AI use | [MIT](../../LICENSE), [README, AI use](../../README.md#ai-use) |
+
 ## Status
 
 Samples, the device registry, datasets and geo search are live-tested on Rabdi. Reward epochs have not been run live, and the retention job is built but not scheduled yet.
