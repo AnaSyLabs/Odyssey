@@ -12,7 +12,8 @@ Testnets only (Arkiv Rabdi, 0G Galileo). Mainnet is out of scope until the audit
 | Gateway (Arkiv + 0G) | Done: signed and encrypted ingest, geo search, paid subscriptions, lab ingest, retention cron. Live-tested up to ingest and dataset creation |
 | `OdsySubscriptions` | Deployed on Galileo `0xc3a946516f2f0CE3fc2065543cb0a8E9b105A54e`, 14 tests. Subscribe and claim not yet run live |
 | `ConsensusRegistry` | Deployed on Galileo `0x83bea227e5D2C72f8F0F73E63175759D4E6055DC`, 10 tests, hand-tested live. Gateway enforces bans |
-| Firmware (`firmware/`) | In progress, not wired to the gateway |
+| World ID enrollment | `/enroll` verifies the proof (signal = device address) and registers the device with a payout wallet. Not yet live-tested |
+| Firmware (`firmware/`) | `odsy_glasses_camera` signs captures with a device key and uploads to the gateway; hardware run not yet confirmed here |
 | Contract audit | Not done |
 
 ## 1. Live testing (do first, in this order)
@@ -46,14 +47,15 @@ Steps are in [TESTING.md](TESTING.md).
 
 ## 4. Deploy to Vercel
 
-- [ ] Root directory `web-monorepo/apps/web`, Node 22.x. Env vars: `ARKIV_ACCESS_KEY`, `ARKIV_PRIVATE_KEY`, `OG_PRIVATE_KEY`, `REGISTRAR_TOKEN`, `CRON_SECRET`, `DATA_KEY`, `SESSION_SECRET`, `ADMIN_ADDRESSES`, `SUBSCRIPTIONS_ADDRESS`, `SUBSCRIPTIONS_FROM_BLOCK`, `CONSENSUS_ADDRESS`.
+- [ ] Root directory `web-monorepo/apps/web`, Node 22.x. Env vars: `ARKIV_ACCESS_KEY`, `ARKIV_PRIVATE_KEY`, `OG_PRIVATE_KEY`, `REGISTRAR_TOKEN`, `CRON_SECRET`, `DATA_KEY`, `SESSION_SECRET`, `ADMIN_ADDRESSES`, `SUBSCRIPTIONS_ADDRESS`, `SUBSCRIPTIONS_FROM_BLOCK`, `CONSENSUS_ADDRESS`, and for `/enroll` `WORLD_APP_ID`, `WORLD_RP_ID`, `WORLD_RP_SIGNING_KEY`.
 - [ ] Set `MAX_UPLOAD_BYTES` to about 3 MB (Vercel rejects bodies over 4.5 MB, and base64 adds a third).
 - [ ] Add `maxDuration` to the ingest and cron routes if logs show timeouts.
 - [ ] Point the simulator at the Vercel URL and run `npm run simulate -- 2`.
 
 ## 5. Hardware and real data
 
-- [ ] ESP32 glasses sign and upload to `/api/ingest` (today only the simulator does).
+- [ ] Confirm the ESP32 camera firmware signs and uploads to `/api/ingest` end to end on real hardware (`firmware/odsy_glasses_camera`).
+- [ ] Live-test `/enroll` with a World ID app (staging works with simulator.worldcoin.org).
 - [ ] Real GPS instead of the hard-coded Bandra location; witness co-signing.
 - [ ] Device key in a secure element (ATECC608A) or ESP32 flash encryption.
 - [ ] Batch Merkle roots on a long-lived chain.

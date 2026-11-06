@@ -114,11 +114,11 @@ See it: TESTING.md parts 2 and 3. Both contracts are linked under *Deployed cont
 
 | What we built | Where | Status |
 |---|---|---|
-| A device key is bound to a World ID nullifier, one device per human | `app/api/devices`, `Devices` schema | Built. The proof itself is checked by a separate registration page, not here |
+| A device key is bound to a World ID nullifier, one device per human. The proof's signal is the device address, so one human's proof cannot enroll another device | `app/api/enroll`, `lib/arkiv.ts` (`registerDevice`), `Devices` schema | Built (World ID v4, RP-signed request, verified against the developer portal). Not yet live-tested by us |
 | Every sample carries the World ID that captured it | `Samples.worldId` | Live |
 | Two provable strikes ban a World ID: no uploads, no new device, data from its first strike unreadable | `ConsensusRegistry`, `lib/consensus.ts`, `lib/access.ts` | Built, contract run live, gateway path not yet end to end |
 
-Not built: the World ID proof verification (`POST /api/devices` trusts the registration page through `REGISTRAR_TOKEN`). `/mockups/enroll` is a demo of the flow, not a real registration.
+Enrollment is `/enroll`: sign in with a wallet, enter the glasses' address and MAC, approve in World App (or `simulator.worldcoin.org` with a staging app). The signed-in wallet becomes the device's payout address. `POST /api/devices` remains for an external registrar that verifies World ID itself (`REGISTRAR_TOKEN`). `/mockups/enroll` is only a demo of the flow. Setup: create an app and a `register-device` action at developer.world.org and set `WORLD_APP_ID`, `WORLD_RP_ID` and `WORLD_RP_SIGNING_KEY`. Design notes: [docs/odsy_provenance_network.md](docs/odsy_provenance_network.md).
 
 ## Deployed contracts
 
@@ -174,6 +174,9 @@ A Next.js app and gateway in `web-monorepo/apps/web`. Live pages talk to Arkiv a
 | `/datasets`, `/datasets/{key}` | Dataset marketplace, paid subscriptions, sample hex map | live, wallet sign-in |
 | `/explore` | Search samples by place on a map | live, wallet sign-in |
 | `/activity` | Transactions, payments and contributor rewards | live, wallet sign-in |
+| `/enroll` | Enroll glasses to a World ID and a payout wallet | live, wallet sign-in |
+| `/capture` | A device's captures with signature and content-hash checks | live, wallet sign-in |
+| `/admin` | List, grant and revoke admins | live, admin only |
 | `/device` | 3D capture device: interactive, exploded, wireframe | static |
 | `/wiring` | ESP32 wiring and reference firmware, one lesson at a time | static |
 | `/docs` | Protocol docs | static |
@@ -205,9 +208,9 @@ npm run dev   # http://localhost:3000
 │                   subscriptions, keys, auth, cron), components (wallet, sign-in gate, skeletons, H3 map),
 │                   lib (arkiv, geo, crypto, sessions, payments, 0G, sample protocol),
 │                   scripts/simulate-device.ts (fake glasses), scripts/lab-ingest.ts (lab-side verified sync)
-├── firmware/      ESP32 glasses: mic, IR camera, IMU, OLED, device signing
+├── firmware/      ESP32 glasses: `odsy_glasses_camera` (camera capture, secp256k1 device key, signed upload) plus mic, IR, IMU and OLED sketches
 ├── contracts/     Foundry: OdsySubscriptions (subscriptions + reward claims) and ConsensusRegistry (tile verdicts, two-strike ban)
-├── docs/          Screenshots used in this README
+├── docs/          Screenshots used in this README and the provenance design note (odsy_provenance_network.md)
 ├── .claude/       Agent skills (Solidity security, OpenZeppelin, token checks)
 ├── .cursor/       Cursor rules (Ponytail)
 ├── AGENTS.md      Rules for AI coding agents
@@ -347,7 +350,9 @@ Runs are incremental. The cursor is `$expiresAt`: new and extended samples alway
 
 | Endpoint | Auth | Does |
 |---|---|---|
-| `POST /api/devices` | `Bearer REGISTRAR_TOKEN` | Binds `{device, worldId, deviceType, mac, payout?}`. Called by the World ID registration page after it verifies the proof |
+| `GET /api/devices?device=` | Public | A device's registry entry and its newest samples |
+| `GET /api/enroll`, `POST /api/enroll` | Signed in | The enroll page's signed World ID request, then `{device, mac, result}`: verifies the proof (signal = device address), refuses a banned World ID, registers the device with the wallet as payout |
+| `POST /api/devices` | `Bearer REGISTRAR_TOKEN` | For an external registrar that verified World ID itself: binds `{device, worldId, deviceType, mac, payout?}`. `403` for a banned World ID |
 | `PATCH /api/devices` | `Bearer REGISTRAR_TOKEN` | `{device, payout}`: set the wallet that receives a device's rewards |
 | `POST /api/ingest` | Device signature | `{kind, mime, capturedAt, lat, lon, sensors, data (base64), signature}` → `201 {entityKey, txHash, contentHash, storage, ogRoot}`. `403` for an unregistered or banned device |
 | `GET /api/samples?lat=&lon=&radius=&kind=&deviceType=&from=&to=&limit=` or `?dataset=` | Public (metadata) | Samples within `radius` metres (max 50 km) or in a dataset, nearest first. `readable` says whether the viewer can decrypt |
@@ -376,7 +381,7 @@ You need:
 - **A 0G testnet wallet with tokens** ([faucet.0g.ai](https://faucet.0g.ai)) as `OG_PRIVATE_KEY`. It deploys and owns the subscriptions contract, and stores payloads over 96 KiB.
 - **Foundry** for the contract: `curl -L https://foundry.paradigm.xyz | bash && foundryup`.
 - **A browser wallet** (MetaMask or similar) with some Galileo test 0G, to sign in and pay. The app adds the Galileo network for you.
-- **New secrets in `.env`:** `DATA_KEY` (`openssl rand -hex 32`, back it up), `SESSION_SECRET` (`openssl rand -hex 32`), `ADMIN_ADDRESSES` (your wallet address), and `SUBSCRIPTIONS_ADDRESS` plus `SUBSCRIPTIONS_FROM_BLOCK` from the deploy below, and optionally `CONSENSUS_ADDRESS` (see *Consensus contract*).
+- **New secrets in `.env`:** `DATA_KEY` (`openssl rand -hex 32`, back it up), `SESSION_SECRET` (`openssl rand -hex 32`), `ADMIN_ADDRESSES` (your wallet address), and `SUBSCRIPTIONS_ADDRESS` plus `SUBSCRIPTIONS_FROM_BLOCK` from the deploy below, optionally `CONSENSUS_ADDRESS` (see *Consensus contract*), and `WORLD_APP_ID`, `WORLD_RP_ID`, `WORLD_RP_SIGNING_KEY` for `/enroll`.
 
 Deploy the contract once:
 
@@ -416,11 +421,11 @@ node -e "import('viem/accounts').then(a=>{const k=a.generatePrivateKey();console
 - **The paywall covers payloads, not metadata.** Location, time, device, MAC and World ID are public on Arkiv by design, because they power the geo index. A subscriber who saves the keys or data keeps them after the subscription ends.
 - **The contract owner is trusted with rewards.** Payments and access are enforced on-chain. The reward split is computed off-chain, though, and the owner key publishes the roots. A wrong root can misdirect up to that epoch's total, but never the treasury or other epochs. There are no refunds. Only externally owned wallets can sign in, not smart-contract wallets.
 - **The contracts aren't audited.** They're tested (24 Foundry tests: 14 for subscriptions, including fuzz and reentrancy cases, and 10 for consensus). Run the repo's `solidity-auditor` skill and an external review before any real money.
-- **Mockups live under `/mockups`** and show demo data only: `/mockups/datasets` (the validator-consensus hex map), `/mockups/analytics`, `/mockups/devices` and `/mockups/enroll`. They are marked "mockup" in the nav and top bar. The live routes are `/datasets`, `/datasets/{key}`, `/explore`, `/activity` and `/api/*`.
+- **Mockups live under `/mockups`** and show demo data only: `/mockups/datasets` (the validator-consensus hex map), `/mockups/analytics`, `/mockups/devices` and `/mockups/enroll`. They are marked "mockup" in the nav and top bar. The live routes are `/datasets`, `/datasets/{key}`, `/explore`, `/activity`, `/enroll`, `/capture`, `/admin` and `/api/*`.
 - **Explorer links** assume `/tx/<hash>` paths on chainscan-galileo.0g.ai and rabdi.explorer.arkiv.network.
 - **Device keys are only as safe as the device.** Real glasses need the key in a secure element (ATECC608A) or ESP32 flash encryption. A key in plain NVS can be copied.
 - **Location is hard-coded to Bandra, Mumbai**, because there is no GPS yet. Even with GPS, a signed location is only as honest as the device; witness co-signing (see *How it works*) is the planned check.
-- **World ID is not verified here.** `POST /api/devices` trusts the registration page via `REGISTRAR_TOKEN`.
+- **World ID is verified in `/api/enroll`, not in `POST /api/devices`.** The latter trusts its caller through `REGISTRAR_TOKEN`, so keep that token secret or leave it unset. The enroll flow needs `WORLD_APP_ID`, `WORLD_RP_ID` and `WORLD_RP_SIGNING_KEY`, and has not been run live by us.
 - **Privacy.** MAC addresses and World ID nullifiers are public on Arkiv. Images can show bystanders. Before real users: hash or drop the MAC and blur faces at the gateway. Immutable personal data also conflicts with GDPR and DPDP deletion rights. Per-sample keys make crypto-shredding possible, by destroying `DATA_KEY`, but only for all samples at once.
 - **Live-tested so far:** device registration, plaintext and encrypted ingest (text and sensor samples), geo queries, wallet sign-in, dataset creation and the lab ingest job's sign-in and dataset lookup, all against Arkiv Rabdi. Not yet confirmed end to end on live networks: a paid subscription unlocking decryption, lab ingest writing decrypted files, payloads over 96 KiB on 0G, the Transactions log, the retention job, and the subscriptions contract on Galileo (deploy, subscribe, publish and claim rewards).
 - **Scale shortcuts** are marked `shortcut:` in code. The geo scan stops at 2,000 candidates. Duplicate and registration checks can race. The extend job runs in a single request.

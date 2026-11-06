@@ -70,6 +70,19 @@ cd ../web-monorepo && npm run dev       # http://localhost:3000
 - [ ] over-96 KiB payload round-trips
 - [ ] cron returns a summary
 
+### 2b. World ID enrollment (optional)
+
+Needs a World ID app with a `register-device` action (developer.world.org; use a staging app with simulator.worldcoin.org). Set `WORLD_APP_ID`, `WORLD_RP_ID` and `WORLD_RP_SIGNING_KEY`, restart, and sign in.
+
+1. Open `/enroll`, enter the glasses' (or a simulated) device address and MAC.
+2. Approve the request in World App or the simulator.
+3. Expect the device registered with your wallet as payout, visible on `/capture`.
+4. Enroll the same device again: `409 already registered`. Use the same World ID for another device: `409 already has a device`.
+5. After the ban in part 3, a banned World ID gets `403` here too.
+
+- [ ] enrollment registers the device and sets the payout wallet
+- [ ] a proof for a different device address is rejected
+
 ## 3. Consensus contract and the ban
 
 ### 3a. Deploy and check
