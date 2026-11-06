@@ -10,7 +10,7 @@ export default function TestimonialsPage() {
     <main className="flex flex-col gap-4">
       <header className="flex flex-wrap items-end gap-x-6 gap-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Testimonials</h1>
-        <p className="muted text-sm">Each one pairs a user&apos;s image with their hash, stored on Arkiv.</p>
+        <p className="muted text-sm">What people say about Odyssey.</p>
       </header>
       {session?.admin && <AddTestimonial onAdded={() => setVersion((v) => v + 1)} />}
       <Testimonials version={version} />
@@ -43,15 +43,18 @@ function AddTestimonial({ onAdded }: { onAdded: () => void }) {
   return (
     <form className="glass flex flex-wrap items-end gap-3 p-4" onSubmit={add}>
       <label className="block">
-        <span className="label">Image (JPEG, PNG or WebP, up to 96 KiB)</span>
+        <span className="label">Image (JPEG, PNG or WebP, up to 512 KiB)</span>
         <input className="field" type="file" name="image" accept="image/jpeg,image/png,image/webp" required />
       </label>
-      <label className="block min-w-64 flex-1">
-        <span className="label">User hash</span>
-        <input className="field mono" name="hash" required placeholder="0x…" pattern="\s*0x[0-9a-fA-F]{64}\s*"
-          title="0x followed by 64 hex characters" autoComplete="off" spellCheck={false} />
+      <label className="block min-w-48">
+        <span className="label">Name</span>
+        <input className="field" name="name" required maxLength={80} autoComplete="off" />
       </label>
-      <button className="btn primary" disabled={busy}>{busy ? "Writing to Arkiv…" : "Add testimonial"}</button>
+      <label className="block w-full">
+        <span className="label">Testimonial</span>
+        <textarea className="field" name="quote" required maxLength={500} rows={3} />
+      </label>
+      <button className="btn primary" disabled={busy}>{busy ? "Adding…" : "Add testimonial"}</button>
       {error && <p className="w-full text-sm text-[var(--st-crimson)]" role="alert">{error}</p>}
     </form>
   );
