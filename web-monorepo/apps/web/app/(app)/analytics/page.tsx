@@ -2,21 +2,17 @@
 import { LuExternalLink } from "react-icons/lu";
 import { useEffect, useState } from "react";
 import { Loading, RowsSkeleton } from "@/components/Skeleton";
+import { useToastError } from "@/components/Toaster";
 import { errorText, useWallet } from "@/components/wallet";
 import { byDataset, fmt, monthly, type Payment, sum } from "@/lib/analytics";
 import { ogTxUrl } from "@/lib/chains";
+import { api } from "@/lib/fetch";
 import { short } from "@/lib/data";
 
 type Sub = Payment & { key: string; dataset: string; txHash: string; paidUntil: number; active: boolean };
 type Reward = { epoch: string; amount: string; amountDisplay: string; claimed: boolean };
 type View = "contributor" | "lab" | "platform";
 
-async function get<T>(url: string): Promise<T> {
-  const res = await fetch(url);
-  const b = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(b.error ?? `${url} failed (${res.status})`);
-  return b;
-}
 const day = (ts?: number) => (ts ? new Date(ts * 1000).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "before the contract");
 
 // SignInGate in the app shell guarantees a session here.
@@ -29,12 +25,12 @@ function Board({ address, admin }: { address: string; admin: boolean }) {
   const [view, setView] = useState<View>("contributor");
   const [subs, setSubs] = useState<Sub[]>();
   const [rewards, setRewards] = useState<Reward[]>();
-  const [error, setError] = useState("");
+  const [error, setError] = useToastError();
 
   useEffect(() => {
-    get<{ subscriptions: Sub[] }>("/api/subscriptions").then((b) => setSubs(b.subscriptions)).catch((e) => setError(errorText(e)));
-    get<{ rewards: Reward[] }>("/api/rewards").then((b) => setRewards(b.rewards)).catch((e) => setError(errorText(e)));
-  }, []);
+    api<{ subscriptions: Sub[] }>("/api/subscriptions").then((b) => setSubs(b.subscriptions)).catch((e) => setError(errorText(e)));
+    api<{ rewards: Reward[] }>("/api/rewards").then((b) => setRewards(b.rewards)).catch((e) => setError(errorText(e)));
+  }, [setError]);
 
   const loading = !subs || !rewards;
   const mine = (subs ?? []).filter((s) => s.subscriber.toLowerCase() === address.toLowerCase());
@@ -102,7 +98,6 @@ function Board({ address, admin }: { address: string; admin: boolean }) {
         </div>
       </header>
 
-      {error && <p className="text-sm text-[var(--st-red,#f87171)]">{error}</p>}
       {loading && !error && <Loading label="Reading the contract" className="p-4"><RowsSkeleton rows={5} /></Loading>}
 
       {!loading && (

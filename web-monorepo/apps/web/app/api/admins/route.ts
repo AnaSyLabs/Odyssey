@@ -1,19 +1,18 @@
 import { getAddress, isAddress } from "viem";
 import { grantAdmin, isRootAdmin, listAdmins, revokeAdmin } from "@/lib/admins";
 import { getSession, unauthorized } from "@/lib/session";
-
-const fail = (status: number, error: string) => Response.json({ error }, { status });
+import { fail, route } from "@/lib/api";
 
 /** Admins only: the root admins (ADMIN_ADDRESSES) and the wallets granted admin from the /admin page. */
-export async function GET() {
+export const GET = route(async function GET() {
   const session = await getSession();
   if (!session) return unauthorized();
   if (!session.admin) return fail(403, "admins only");
   return Response.json({ me: session.address, admins: await listAdmins() });
-}
+});
 
 /** Admins only: make a wallet an admin. Body: { address }. */
-export async function POST(req: Request) {
+export const POST = route(async function POST(req: Request) {
   const session = await getSession();
   if (!session) return unauthorized();
   if (!session.admin) return fail(403, "admins only");
@@ -23,10 +22,10 @@ export async function POST(req: Request) {
   const granted = await grantAdmin(address, session.address);
   if (!granted) return fail(409, "that wallet is already an admin");
   return Response.json({ address, ...granted }, { status: 201 });
-}
+});
 
 /** Admins only: remove a granted admin. Query: ?address=0x... Root admins and your own wallet can't be removed here. */
-export async function DELETE(req: Request) {
+export const DELETE = route(async function DELETE(req: Request) {
   const session = await getSession();
   if (!session) return unauthorized();
   if (!session.admin) return fail(403, "admins only");
@@ -37,4 +36,4 @@ export async function DELETE(req: Request) {
   if (address.toLowerCase() === session.address.toLowerCase()) return fail(400, "you can't remove yourself; ask another admin");
   if (!(await revokeAdmin(address))) return fail(404, "that wallet wasn't granted admin from this page");
   return Response.json({ address, removed: true });
-}
+});

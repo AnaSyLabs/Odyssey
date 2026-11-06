@@ -1,13 +1,14 @@
 "use client";
 import { useState } from "react";
 import { LuBot, LuCopy } from "react-icons/lu";
+import { useToastError } from "@/components/Toaster";
 
 const TABS = ["Claude Code", "Cursor", "Claude Desktop", "Other"] as const;
 
 /** Mints a bearer token for /api/mcp and shows a paste-ready setup for each client. The server is remote, so nothing is installed or cloned. */
 export default function McpAccess() {
   const [token, setToken] = useState("");
-  const [error, setError] = useState("");
+  const [, setError] = useToastError();
   const [tab, setTab] = useState<(typeof TABS)[number]>("Claude Code");
   const [copied, setCopied] = useState(false);
   const url = typeof window === "undefined" ? "" : `${window.location.origin}/api/mcp`;
@@ -55,7 +56,6 @@ export default function McpAccess() {
         </p>
         <button className="btn" onClick={mint}>{token ? "New token" : "Create token"}</button>
       </div>
-      {error && <p className="text-[var(--st-red,#f87171)]">{error}</p>}
       {token && (
         <div className="space-y-2">
           <p className="muted">Valid for 7 days. Copy it now; it is not shown again. Anyone with it can read your subscribed datasets.</p>

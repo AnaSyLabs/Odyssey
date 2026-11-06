@@ -1,15 +1,16 @@
 import { keyFor, loadSample, readAccess } from "@/lib/access";
 import { getSession, unauthorized } from "@/lib/session";
+import { fail, route } from "@/lib/api";
 
 /**
  * Per-sample decryption keys for a signed-in lab: POST {"keys": [entityKey, ...]} (max 100).
  * The lab fetches ciphertext from Arkiv/0G itself and decrypts locally (scripts/lab-ingest.ts).
  */
-export async function POST(req: Request) {
+export const POST = route(async function POST(req: Request) {
   const session = await getSession();
   if (!session) return unauthorized();
   const b = await req.json().catch(() => null);
-  if (!Array.isArray(b?.keys) || b.keys.length > 100) return Response.json({ error: "keys: array of up to 100 entity keys" }, { status: 400 });
+  if (!Array.isArray(b?.keys) || b.keys.length > 100) return fail(400, "keys: array of up to 100 entity keys");
 
   const canRead = await readAccess(session);
   const keys: Record<string, string> = {};
@@ -20,4 +21,4 @@ export async function POST(req: Request) {
     else denied.push(String(k));
   }
   return Response.json({ keys, denied });
-}
+});

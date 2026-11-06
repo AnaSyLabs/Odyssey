@@ -6,10 +6,9 @@ import { findSamples } from "@/lib/query";
 import { KINDS, type Kind } from "@/lib/sample";
 import { Datasets } from "@/lib/schema";
 import { getSession } from "@/lib/session";
+import { fail, route } from "@/lib/api";
 
 const MAX_RADIUS_M = 50_000;
-
-const fail = (status: number, error: string) => Response.json({ error }, { status });
 
 /**
  * Geo query, public metadata only:
@@ -17,7 +16,7 @@ const fail = (status: number, error: string) => Response.json({ error }, { statu
  *   GET /api/samples?dataset=<dataset key>[&limit=50]
  * Nearest first. `readable` says whether the signed-in wallet may decrypt it (GET /api/samples/{key}).
  */
-export async function GET(req: Request) {
+export const GET = route(async function GET(req: Request) {
   const q = new URL(req.url).searchParams;
   const limit = Math.min(Number(q.get("limit") ?? 50), 500);
   if (!(limit > 0)) return fail(400, "bad limit");
@@ -48,4 +47,4 @@ export async function GET(req: Request) {
     total: hits.length,
     samples: await Promise.all(hits.slice(0, limit).map(async ({ row, ...h }) => ({ ...h, readable: !h.encrypted || (await canRead(row)) }))),
   });
-}
+});

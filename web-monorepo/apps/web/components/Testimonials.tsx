@@ -1,13 +1,14 @@
 "use client";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { useToastError } from "@/components/Toaster";
 
 type Testimonial = { id: string; name: string; role: string; quote: string; src: string };
 
 /** Every testimonial: image on the left, words and name on the right. `editable` adds an Edit button (admins). */
 export default function Testimonials({ editable = false, version = 0 }: { editable?: boolean; version?: number }) {
   const [list, setList] = useState<Testimonial[]>();
-  const [error, setError] = useState<string>();
+  const [error, setError] = useToastError();
   const [editing, setEditing] = useState<string>();
   const [reload, setReload] = useState(0);
 
@@ -16,9 +17,9 @@ export default function Testimonials({ editable = false, version = 0 }: { editab
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`testimonials failed (${r.status})`))))
       .then((b) => setList(b.testimonials))
       .catch((e: Error) => setError(e.message));
-  }, [version, reload]);
+  }, [version, reload, setError]);
 
-  if (error) return <p className="text-center text-sm text-[var(--st-crimson)]" role="alert">{error}</p>;
+  if (error) return <p className="muted text-center text-sm">Couldn&apos;t load testimonials.</p>;
   if (!list) return <p className="muted text-center text-sm">Loading testimonials…</p>;
   if (!list.length) return <p className="muted text-center text-sm">No testimonials yet.</p>;
   return (
@@ -45,7 +46,7 @@ export default function Testimonials({ editable = false, version = 0 }: { editab
 /** Adds a testimonial, or edits `initial` when given (leave the image empty to keep the current one). */
 export function TestimonialForm({ initial, onDone, onCancel }: { initial?: Testimonial; onDone: () => void; onCancel?: () => void }) {
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string>();
+  const [, setError] = useToastError();
 
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -85,7 +86,6 @@ export function TestimonialForm({ initial, onDone, onCancel }: { initial?: Testi
       </label>
       <button className="btn primary" disabled={busy}>{busy ? "Saving…" : initial ? "Save" : "Add testimonial"}</button>
       {onCancel && <button type="button" className="btn" onClick={onCancel}>Cancel</button>}
-      {error && <p className="w-full text-sm text-[var(--st-crimson)]" role="alert">{error}</p>}
     </form>
   );
 }

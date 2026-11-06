@@ -4,15 +4,14 @@ import { getAddress, isAddress } from "viem";
 import { findDevice, need, registerDevice } from "@/lib/arkiv";
 import { isBanned } from "@/lib/consensus";
 import { getSession, unauthorized } from "@/lib/session";
+import { fail, route } from "@/lib/api";
 
 const ACTION = "register-device";
 // "staging" pairs with simulator.worldcoin.org; real World App proofs need "production".
 const ENVIRONMENT = process.env.WORLD_ENVIRONMENT === "staging" ? "staging" : "production";
 
-const fail = (status: number, error: string) => Response.json({ error }, { status });
-
 /** A fresh RP-signed World ID request context for the enroll page. The signing key never leaves the server. */
-export async function GET() {
+export const GET = route(async function GET() {
   if (!(await getSession())) return unauthorized();
   const appId = need("WORLD_APP_ID");
   const sig = signRequest({ action: ACTION, signingKeyHex: need("WORLD_RP_SIGNING_KEY") });
@@ -22,13 +21,13 @@ export async function GET() {
     environment: ENVIRONMENT,
     rp_context: { rp_id: need("WORLD_RP_ID"), nonce: sig.nonce, created_at: sig.createdAt, expires_at: sig.expiresAt, signature: sig.sig },
   });
-}
+});
 
 /**
  * Verifies a World ID proof whose signal is the device address, then registers the device to that human.
  * Body: { device: 0x address, mac: "AA:BB:..", result: IDKitResult }. The signed-in wallet becomes the payout address.
  */
-export async function POST(req: Request) {
+export const POST = route(async function POST(req: Request) {
   const session = await getSession();
   if (!session) return unauthorized();
   const b = await req.json().catch(() => null);
@@ -55,4 +54,4 @@ export async function POST(req: Request) {
   // v3 nullifiers are hex, v4 are decimal; the registry stores hex.
   const worldId = `0x${BigInt(proof.nullifier).toString(16)}`;
   return registerDevice({ device, worldId, deviceType: "esp32-cam-glasses", mac: b.mac, payout: session.address });
-}
+});

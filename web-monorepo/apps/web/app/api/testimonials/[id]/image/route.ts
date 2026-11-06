@@ -1,9 +1,10 @@
 import { testimonialImage } from "@/lib/testimonials";
+import { fail, route } from "@/lib/api";
 
 /** Public: an uploaded testimonial image. The list adds ?v= so an edit gets a fresh URL. */
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export const GET = route(async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const img = testimonialImage((await params).id);
-  if (!img) return Response.json({ error: "not found" }, { status: 404 });
+  if (!img) return fail(404, "not found");
   return new Response(new Uint8Array(img.data), {
     headers: {
       "content-type": img.mime,
@@ -12,4 +13,4 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       "content-security-policy": "sandbox",
     },
   });
-}
+});

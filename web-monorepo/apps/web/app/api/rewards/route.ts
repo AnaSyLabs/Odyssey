@@ -6,12 +6,13 @@ import { type Leaf, rewardTree } from "@/lib/rewards";
 import { Rewards } from "@/lib/schema";
 import { getSession, unauthorized } from "@/lib/session";
 import { subscriptionsAbi } from "@/lib/subscriptions-abi";
+import { route } from "@/lib/api";
 
 /**
  * Contributor rewards for the signed-in wallet, one row per published epoch it has a share in, with the
  * Merkle proof the contract's claim() needs. The leaves live on Arkiv (odsy.rewards), the roots on the contract.
  */
-export async function GET() {
+export const GET = route(async function GET() {
   const session = await getSession();
   if (!session) return unauthorized();
   const me = session.address.toLowerCase();
@@ -40,4 +41,4 @@ export async function GET() {
     });
   }
   return Response.json({ contract: address, rewards: rows.reverse() });
-}
+});

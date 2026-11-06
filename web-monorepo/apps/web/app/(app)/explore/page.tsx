@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { Bone, Loading, PageSkeleton, RowsSkeleton } from "@/components/Skeleton";
+import { useToastError } from "@/components/Toaster";
 import { useWallet } from "@/components/wallet";
 import { short } from "@/lib/data";
 
@@ -48,7 +49,7 @@ function Explore() {
   const [f, setF] = useState<Form>({ ...BANDRA, radius: "500", kind: "", deviceType: "", from: "", to: "" });
   const [rows, setRows] = useState<Row[]>();
   const [meta, setMeta] = useState<{ total: number; scanned: number; truncated: boolean }>();
-  const [error, setError] = useState<string>();
+  const [error, setError] = useToastError();
   const [loading, setLoading] = useState(false);
   const selected = params.get("sample");
 
@@ -106,7 +107,6 @@ function Explore() {
             {meta && !loading ? <span>{meta.total} samples{meta.truncated && ` (first ${meta.scanned} scanned)`}</span> : <Bone className="h-3 w-24" />}
             {!session && <span className="ml-auto">Sign in to decrypt what you have access to.</span>}
           </div>
-          {error && <p className="p-4 text-sm text-[var(--st-crimson)]" role="alert">{error}</p>}
           {(!rows || loading) && !error && <Loading label="Searching Arkiv" className="p-4"><RowsSkeleton rows={6} /></Loading>}
           {rows?.length === 0 && !loading && !error && <p className="p-4 text-sm text-[var(--st-on-var)]">No samples here. Try a larger radius or another area.</p>}
           <div className="overflow-x-auto">
@@ -158,7 +158,7 @@ function Check({ ok, label }: { ok: boolean | null; label: string }) {
 
 function SampleDetail({ id }: { id: string }) {
   const [s, setS] = useState<Detail>();
-  const [error, setError] = useState<string>();
+  const [error, setError] = useToastError();
   const [text, setText] = useState<string>();
 
   useEffect(() => {
@@ -170,9 +170,9 @@ function SampleDetail({ id }: { id: string }) {
         setText(b.data ? new TextDecoder().decode(Uint8Array.from(atob(b.data), (c) => c.charCodeAt(0))) : await fetch(`/api/samples/${id}/data`).then((x) => x.text()));
       }
     }).catch((e) => setError(e.message));
-  }, [id]);
+  }, [id, setError]);
 
-  if (error) return <p className="text-sm text-[var(--st-crimson)]" role="alert">{error}</p>;
+  if (error) return <p className="muted text-sm">Couldn&apos;t load this sample.</p>;
   if (!s) {
     return (
       <Loading label="Loading sample from Arkiv" className="space-y-4">

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LuArrowLeft, LuEyeOff, LuLock, LuLockOpen, LuX } from "react-icons/lu";
 import { Bone, Loading, RowsSkeleton } from "@/components/Skeleton";
+import { useToastError } from "@/components/Toaster";
 import { useWallet } from "@/components/wallet";
 import { short } from "@/lib/data";
 import { useDark } from "@/lib/theme";
@@ -37,7 +38,7 @@ export default function SampleHexMap({ datasetKey }: { datasetKey: string }) {
   const [dataset, setDataset] = useState<Dataset | null>();
   const [samples, setSamples] = useState<Sample[]>();
   const [now, setNow] = useState(0);
-  const [error, setError] = useState<string>();
+  const [error, setError] = useToastError();
   const [range, setRange] = useState<keyof typeof RANGES>("All");
   const [kinds, setKinds] = useState<string[]>([]);
   const [device, setDevice] = useState("");
@@ -54,7 +55,7 @@ export default function SampleHexMap({ datasetKey }: { datasetKey: string }) {
       setSamples(s.body.samples ?? []);
       setNow(Date.now() / 1000);
     }).catch((e) => setError(String(e)));
-  }, [datasetKey, session]);
+  }, [datasetKey, session, setError]);
 
   const canView = !!dataset && (!!dataset.paidUntil || !!session?.admin);
   const res = dataset ? resFor(dataset.radiusM) : 9;
@@ -136,7 +137,7 @@ export default function SampleHexMap({ datasetKey }: { datasetKey: string }) {
     </header>
   );
 
-  if (error) return <main className="flex flex-col gap-4">{header}<p className="text-sm text-[var(--st-crimson)]" role="alert">{error}</p></main>;
+  if (error) return <main className="flex flex-col gap-4">{header}<p className="muted text-sm">Couldn&apos;t load this dataset&apos;s samples.</p></main>;
   if (dataset === null) return <main className="flex flex-col gap-4">{header}</main>;
   if (!dataset || !samples) {
     return (

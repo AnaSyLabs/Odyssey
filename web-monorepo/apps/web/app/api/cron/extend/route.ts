@@ -6,6 +6,7 @@ import { bannedFrom } from "@/lib/consensus";
 import { arkivPublic, arkivWallet, Devices, gatewayAddress, hasBearer, Samples } from "@/lib/arkiv";
 import { Admins, Datasets, Rewards } from "@/lib/schema";
 import { groupOf, thinGroup } from "@/lib/retention";
+import { fail, route } from "@/lib/api";
 
 const PRECISION = Number(process.env.THIN_GEOHASH_PRECISION ?? 7); // geohash-7 ≈ 153 m x 153 m
 const WINDOW = Number(process.env.THIN_WINDOW_SECONDS ?? 3600);
@@ -30,8 +31,8 @@ const afterKey = (after?: Hex) => (after ? [gt("$key", key(after))] : []);
  * `Authorization: Bearer $CRON_SECRET`.
  * shortcut: runs in one request; split into batches if a day's expiring set outgrows the function timeout.
  */
-export async function GET(req: Request) {
-  if (!hasBearer(req, "CRON_SECRET")) return Response.json({ error: "unauthorized" }, { status: 401 });
+export const GET = route(async function GET(req: Request) {
+  if (!hasBearer(req, "CRON_SECRET")) return fail(401, "unauthorized");
   const pub = arkivPublic();
   const gateway = gatewayAddress();
   const { currentBlock } = await pub.getBlockTiming();
@@ -108,4 +109,4 @@ export async function GET(req: Request) {
     extendedRewardEpochs: rewards.length,
     extendedAdmins: admins.length,
   });
-}
+});
