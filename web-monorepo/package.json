@@ -8,6 +8,7 @@
     "lint": "npm run lint -w web",
     "test": "npm test -w web",
     "simulate": "npm run simulate -w web --",
-    "lab:ingest": "npm run lab:ingest -w web"
+    "lab:ingest": "npm run lab:ingest -w web",
+    "rewards:publish": "npm run rewards:publish -w web --"
   }
 }

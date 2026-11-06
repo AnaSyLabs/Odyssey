@@ -34,6 +34,7 @@ const reg = await post(
     worldId: process.env.SIM_WORLD_ID ?? sha256(device.address), // fake nullifier, unique per sim device
     deviceType: "esp32-cam-glasses",
     mac: process.env.SIM_MAC ?? "24:0A:C4:00:00:01",
+    ...(process.env.SIM_PAYOUT_ADDRESS && { payout: process.env.SIM_PAYOUT_ADDRESS }), // wallet that gets this device's rewards
   },
   { authorization: `Bearer ${process.env.REGISTRAR_TOKEN}` },
 );

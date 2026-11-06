@@ -1,9 +1,9 @@
 import { connection } from "next/server";
 import { galileo } from "@/lib/chains";
-import { need } from "@/lib/arkiv";
+import { subscriptionsAddress } from "@/lib/contract";
 
-/** Public settings the browser needs to pay: the treasury address and the payment chain. */
+/** Public settings the browser needs to pay: the subscriptions contract and its chain. */
 export async function GET() {
   await connection(); // read env at request time, not at build
-  return Response.json({ treasury: need("TREASURY_ADDRESS"), chainId: galileo.id });
+  return Response.json({ contract: subscriptionsAddress(), chainId: galileo.id });
 }

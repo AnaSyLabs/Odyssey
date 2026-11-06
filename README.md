@@ -121,7 +121,7 @@ npm run dev   # http://localhost:3000
 │                   lib (arkiv, geo, crypto, sessions, payments, 0G, sample protocol),
 │                   scripts/simulate-device.ts (fake glasses), scripts/lab-ingest.ts (lab-side verified sync)
 ├── firmware/      ESP32 glasses: mic, IR camera, IMU, OLED, device signing
-├── contracts/     Foundry: ConsensusRegistry (tile verdicts and the two-strike ban); token and rewards to come
+├── contracts/     Foundry: OdsySubscriptions (subscriptions + reward claims) and ConsensusRegistry (tile verdicts, two-strike ban)
 ├── docs/          Screenshots used in this README
 ├── .claude/       Agent skills (Solidity security, OpenZeppelin, token checks)
 ├── .cursor/       Cursor rules (Ponytail)
@@ -185,16 +185,26 @@ The live pages (Datasets, the dataset map, Explore and Transactions) show a **si
 | **Datasets** (`/datasets`) | Browse datasets, preview sample metadata, subscribe with test 0G | Renew, see access-until date, lab-ingest snippet, open the map | Create datasets, list or unlist them |
 | **Dataset map** (`/datasets/{key}`) | Subscribe prompt | H3 hexagon map of the dataset's samples: volume, kind and access per cell, linking into Explore | Same, for every dataset |
 | **Explore samples** (`/explore`) | Search by dataset or area, kind and time; see metadata and the signature proof | Decrypt and view or download covered samples | Decrypt everything |
-| **Transactions** (`/activity`) | Own 0G payments | Plus the Arkiv records of their subscriptions | Every recent Arkiv write by the gateway and every payment |
+| **Transactions** (`/activity`) | Own 0G payments and contributor rewards to claim | Same | Every payment, every recent Arkiv write by the gateway |
 
-**Paying.** A dataset is a saved filter (area, kind, device type, time range) plus a price in 0G per 30 days. Subscribing works like this:
+**Paying.** A dataset is a saved filter (area, kind, device type, time range) plus a price in 0G per 30 days. Labs pay the **`OdsySubscriptions` contract** on **0G Galileo** (chain 16602, `contracts/`):
 
-1. The wallet sends the price in 0G on **Galileo testnet** (chain 16602) to `TREASURY_ADDRESS`, with the dataset key as transaction data. The app switches or adds the network for you.
-2. The server checks the receipt: success, from the signed-in wallet, to the treasury, at least the price, the right dataset in the data, and never used before.
-3. The server writes an `odsy.subscriptions` entity with `paidUntil`. Renewals stack from the current `paidUntil`, up to 150 days ahead.
-4. If the page closes mid-payment, **"Already paid?"** records the subscription from the transaction hash.
+1. Creating a dataset lists it on the contract at its price (`setPrice`); unlisting sets the price to 0. Listing again also repairs a price that failed to set.
+2. **Subscribe** calls `subscribe(datasetKey)` with exactly the price. The contract records `paidUntil` in the same transaction: renewals stack from the current `paidUntil`, up to 150 days ahead. The app switches or adds the network for you.
+3. The gateway reads `paidUntil` from the contract to decide who gets decryption keys. Periods recorded on Arkiv before the contract shipped (`odsy.subscriptions`) stay valid until they lapse.
 
 New samples that match a dataset are covered automatically.
+
+### Contributor rewards
+
+**70 %** of every payment is set aside for contributors and **30 %** goes to the treasury. The owner can change the split, but the contract never lets the contributor share fall below 50 %.
+
+1. **Payout wallet.** Each device can have a payout wallet: its owner's wallet, never the key on the glasses. Set it at registration (`payout` in `POST /api/devices`) or later with `PATCH /api/devices`.
+2. **Epochs.** An admin runs `npm run rewards:publish`. For every `Subscribed` event since the last epoch, it splits the dataset's contributor share across the dataset's samples, pro rata by device, to each device's payout wallet. It publishes one Merkle root with `publishRewards` and stores the leaves on Arkiv (`odsy.rewards`), plus a local copy in `apps/web/rewards/`.
+3. **Claiming.** Contributors see their share under **Transactions → Contributor rewards** and click **Claim**. Anyone may call `claim()` for an account; the money always goes to that account.
+4. **Safety limits.** The contract never pays more than an epoch's published total. The owner can only withdraw treasury revenue (`withdrawTreasury`), never contributor funds.
+
+Shares for devices without a payout wallet, and rounding dust, stay unallocated in the contract.
 
 ### Geospatial index
 
@@ -252,19 +262,20 @@ Runs are incremental. The cursor is `$expiresAt`: new and extended samples alway
 
 | Endpoint | Auth | Does |
 |---|---|---|
-| `POST /api/devices` | `Bearer REGISTRAR_TOKEN` | Binds `{device, worldId, deviceType, mac}`. Called by the World ID registration page after it verifies the proof |
+| `POST /api/devices` | `Bearer REGISTRAR_TOKEN` | Binds `{device, worldId, deviceType, mac, payout?}`. Called by the World ID registration page after it verifies the proof |
+| `PATCH /api/devices` | `Bearer REGISTRAR_TOKEN` | `{device, payout}`: set the wallet that receives a device's rewards |
 | `POST /api/ingest` | Device signature | `{kind, mime, capturedAt, lat, lon, sensors, data (base64), signature}` → `201 {entityKey, txHash, contentHash, storage, ogRoot}` |
 | `GET /api/samples?lat=&lon=&radius=&kind=&deviceType=&from=&to=&limit=` or `?dataset=` | Public (metadata) | Samples within `radius` metres (max 50 km) or in a dataset, nearest first. `readable` says whether the viewer can decrypt |
 | `GET /api/samples/{key}` | Public, more with access | Metadata and the re-checked signature. With access, also the decrypted sensors and inline payload, and `verified.contentHash` |
 | `GET /api/samples/{key}/data` | Access | Decrypted payload as a file (inline or from 0G), hash-checked |
 | `GET /api/auth/nonce`, `POST /api/auth/verify`, `POST /api/auth/logout`, `GET /api/auth/me` | — | Sign-In with Ethereum session |
 | `GET /api/datasets` | Public | Datasets with sample counts and the viewer's access-until date |
-| `POST /api/datasets`, `PATCH /api/datasets/{key}` | Admin | Create a dataset, or list/unlist it with `{active}` |
-| `POST /api/subscriptions` | Signed in | `{dataset, txHash}`: verify a 0G payment and grant 30 days. `425` means not mined yet; retry |
-| `GET /api/subscriptions` | Signed in | Own paid periods (admin: all) |
+| `POST /api/datasets`, `PATCH /api/datasets/{key}` | Admin | Create a dataset and list it on the contract, or list/unlist it with `{active}` |
+| `GET /api/subscriptions` | Signed in | Own payments from the contract's `Subscribed` events plus legacy Arkiv periods (admin: all) |
+| `GET /api/rewards` | Signed in | The wallet's reward per epoch with its Merkle proof and claimed state |
 | `POST /api/keys` | Signed in | `{keys: [...]}` → per-sample decryption keys the wallet is entitled to |
 | `GET /api/activity` | Signed in | Recent Arkiv writes with tx hashes (admin: all, from the last ~7 days of logs; lab: own subscriptions) |
-| `GET /api/config` | Public | Treasury address and payment chain |
+| `GET /api/config` | Public | Subscriptions contract address and its chain |
 | `GET /api/cron/extend` | `Bearer CRON_SECRET` | Retention job above |
 
 ### Setup
@@ -274,9 +285,22 @@ You need:
 - **Node.js 22.10+** (the simulator and tests run TypeScript directly).
 - **An Arkiv access key** from [hub.arkiv.network/access-keys](https://hub.arkiv.network/access-keys). The public RPC is heavily rate limited without one.
 - **A gateway wallet funded with tGLM** from the [Arkiv faucet](https://hub.arkiv.network/faucet). Every sample, registration and extension is a transaction.
-- **A 0G testnet wallet with tokens** ([faucet.0g.ai](https://faucet.0g.ai)). This is only needed for payloads over 96 KiB.
+- **A 0G testnet wallet with tokens** ([faucet.0g.ai](https://faucet.0g.ai)) as `OG_PRIVATE_KEY`. It deploys and owns the subscriptions contract, and stores payloads over 96 KiB.
+- **Foundry** for the contract: `curl -L https://foundry.paradigm.xyz | bash && foundryup`.
 - **A browser wallet** (MetaMask or similar) with some Galileo test 0G, to sign in and pay. The app adds the Galileo network for you.
-- **New secrets in `.env`:** `DATA_KEY` (`openssl rand -hex 32`, back it up), `SESSION_SECRET` (`openssl rand -hex 32`), `ADMIN_ADDRESSES` (your wallet address) and `TREASURY_ADDRESS` (where 0G payments go).
+- **New secrets in `.env`:** `DATA_KEY` (`openssl rand -hex 32`, back it up), `SESSION_SECRET` (`openssl rand -hex 32`), `ADMIN_ADDRESSES` (your wallet address), and `SUBSCRIPTIONS_ADDRESS` plus `SUBSCRIPTIONS_FROM_BLOCK` from the deploy below.
+
+Deploy the contract once:
+
+```bash
+cd contracts
+git submodule update --init --recursive     # OpenZeppelin Contracts + forge-std
+forge test                                  # 14 tests, fuzzing included
+forge script script/DeploySubscriptions.s.sol --rpc-url galileo --broadcast --private-key $OG_PRIVATE_KEY
+# put the printed address in SUBSCRIPTIONS_ADDRESS, and the deploy block in SUBSCRIPTIONS_FROM_BLOCK
+```
+
+Datasets created before the contract need listing on it: in the app, **Unlist**, then **List dataset for sale**.
 
 ```bash
 cd web-monorepo
@@ -286,8 +310,9 @@ npm run dev                                 # gateway on http://localhost:3000
 npm run simulate -- 3                       # fake glasses: register, upload 3 signed samples from Bandra, query nearby
 npm run simulate -- 1 ./photo.jpg           # an image > 96 KiB goes through 0G
 npm run simulate -- 3 --kind sensor         # weather readings (kind=sensor, application/json)
-npm test                                    # geo, thinning, signature, encryption, session, payment tests (no network)
+npm test                                    # geo, thinning, signature, encryption, session, reward-split tests (no network)
 npm run lab:ingest                          # with the LAB_* vars set: pull your datasets into apps/web/lab-data/
+npm run rewards:publish -- --dry-run        # preview the next reward epoch; drop --dry-run to publish it
 ```
 
 Generate a key with:
@@ -301,14 +326,15 @@ node -e "import('viem/accounts').then(a=>{const k=a.generatePrivateKey();console
 - **Tamper-evident, not tamper-proof.** Samples are created `readonly`, so nobody can patch them. The gateway wallet can still delete them, and they expire if the extend job stops. For permanence, anchor a Merkle root per batch on a long-lived chain (Roadmap Phase 1).
 - **The gateway is trusted.** It holds the key that writes everything and `DATA_KEY`, which decrypts everything. Anyone can re-check a sample's device signature, but a compromised gateway could refuse uploads, delete samples or leak data.
 - **The paywall covers payloads, not metadata.** Location, time, device, MAC and World ID are public on Arkiv by design, because they power the geo index. A subscriber who saves the keys or data keeps them after the subscription ends.
-- **Payments are checked off-chain.** The server verifies each 0G receipt and records it on Arkiv. There's no contract and no refunds. A subscription contract would make access verifiable on-chain. Only externally owned wallets can sign in, not smart-contract wallets.
+- **The contract owner is trusted with rewards.** Payments and access are enforced on-chain. The reward split is computed off-chain, though, and the owner key publishes the roots. A wrong root can misdirect up to that epoch's total, but never the treasury or other epochs. There are no refunds. Only externally owned wallets can sign in, not smart-contract wallets.
+- **The contract isn't audited.** It's tested (14 Foundry tests, including fuzz and reentrancy cases). Run the repo's `solidity-auditor` skill and an external review before any real money.
 - **Mockups live under `/mockups`** and show demo data only: `/mockups/datasets` (the validator-consensus hex map), `/mockups/analytics`, `/mockups/devices` and `/mockups/enroll`. They are marked "mockup" in the nav and top bar. The live routes are `/datasets`, `/datasets/{key}`, `/explore`, `/activity` and `/api/*`.
 - **Explorer links** assume `/tx/<hash>` paths on chainscan-galileo.0g.ai and rabdi.explorer.arkiv.network.
 - **Device keys are only as safe as the device.** Real glasses need the key in a secure element (ATECC608A) or ESP32 flash encryption. A key in plain NVS can be copied.
 - **Location is hard-coded to Bandra, Mumbai**, because there is no GPS yet. Even with GPS, a signed location is only as honest as the device; witness co-signing (see *How it works*) is the planned check.
 - **World ID is not verified here.** `POST /api/devices` trusts the registration page via `REGISTRAR_TOKEN`.
 - **Privacy.** MAC addresses and World ID nullifiers are public on Arkiv. Images can show bystanders. Before real users: hash or drop the MAC and blur faces at the gateway. Immutable personal data also conflicts with GDPR and DPDP deletion rights. Per-sample keys make crypto-shredding possible, by destroying `DATA_KEY`, but only for all samples at once.
-- **Live-tested so far:** device registration, plaintext and encrypted ingest (text and sensor samples), geo queries, wallet sign-in, dataset creation and the lab ingest job's sign-in and dataset lookup, all against Arkiv Rabdi. Not yet confirmed end to end on live networks: a paid subscription unlocking decryption, lab ingest writing decrypted files, payloads over 96 KiB on 0G, the Transactions log and the retention job.
+- **Live-tested so far:** device registration, plaintext and encrypted ingest (text and sensor samples), geo queries, wallet sign-in, dataset creation and the lab ingest job's sign-in and dataset lookup, all against Arkiv Rabdi. Not yet confirmed end to end on live networks: a paid subscription unlocking decryption, lab ingest writing decrypted files, payloads over 96 KiB on 0G, the Transactions log, the retention job, and the subscriptions contract on Galileo (deploy, subscribe, publish and claim rewards).
 - **Scale shortcuts** are marked `shortcut:` in code. The geo scan stops at 2,000 candidates. Duplicate and registration checks can race. The extend job runs in a single request.
 
 ## Consensus contract
@@ -337,7 +363,7 @@ Per dataset (`createDataset`): hex size (H3 res 6 to 10), time bucket, minimum c
 
 ```bash
 cd contracts
-forge install --no-git foundry-rs/forge-std OpenZeppelin/openzeppelin-contracts
+git submodule update --init --recursive
 forge test
 forge script script/Deploy.s.sol --rpc-url $RPC_URL --private-key $DEPLOYER_KEY --broadcast
 ```
@@ -349,7 +375,8 @@ Limits of this first version: validators are an allowlist with one vote each (no
 - [ ] **Phase 1: Prove it.** Device signing, upload to 0G, batch roots on-chain, test-token rewards. The team does the spot-checks.
   - [x] Signed device uploads, device registry with World ID binding, encrypted storage on Arkiv and 0G
   - [x] Geo search, paid dataset subscriptions on 0G Galileo, lab ingest with local decryption
-  - [ ] Batch Merkle roots on a long-lived chain, contributor rewards, real glasses with GPS
+  - [x] Subscription contract with a 70 % contributor split and Merkle reward claims
+  - [ ] Batch Merkle roots on a long-lived chain, real glasses with GPS
 - [ ] **Phase 2: Stake it.** Permissioned staked validators, honeypots, challenge window, slashing.
 - [ ] **Phase 3: Open it.** Permissionless validators, TEE gateways, rarity rewards, buyer marketplace with licensing.
 - [ ] **Phase 4: Value it.** Reward data by how much it actually improves a model.
@@ -366,4 +393,4 @@ Wear it, capture your world, get paid. Your data is encrypted, your identity sta
 
 ---
 
-<sub>Status: **testnet prototype**. The Arkiv data layer, encryption, dataset subscriptions and lab ingest are built (see *Arkiv data layer*); validation, staking and contributor rewards are still design. The app's Protocol page (`/docs`) shows what's live next to the full design. Numbers (1–5 % sampling, challenge windows) are starting assumptions to tune against measured fraud rates.</sub>
+<sub>Status: **testnet prototype**. The Arkiv data layer, encryption, dataset subscriptions and lab ingest are built (see *Arkiv data layer*), with payments and contributor rewards on the `OdsySubscriptions` contract; validation and staking are still design. The app's Protocol page (`/docs`) shows what's live next to the full design. Numbers (1–5 % sampling, challenge windows) are starting assumptions to tune against measured fraud rates.</sub>

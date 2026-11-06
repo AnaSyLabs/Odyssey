@@ -3,24 +3,35 @@ import { and, eq, gt } from "@arkiv-network/sdk/query";
 import { addr, u64 } from "@arkiv-network/sdk/schema";
 import { type Hex, isHex } from "viem";
 import { arkivPublic, gatewayAddress, need } from "@/lib/arkiv";
+import { contractPaidUntil } from "@/lib/contract";
 import { decrypt, sampleKey } from "@/lib/crypto";
 import { datasetFilter, type Filter, matches, sampleFields } from "@/lib/filters";
 import { Datasets, Samples, Subscriptions } from "@/lib/schema";
 
-/** Datasets the address has paid for and that are still within their paid period, with the paid-until time. */
+/**
+ * Datasets the address has paid for and that are still within their paid period, with the paid-until time.
+ * Reads the OdsySubscriptions contract, plus legacy periods recorded on Arkiv before it shipped.
+ */
 export async function activeSubscriptions(address: Hex) {
   const pub = arkivPublic();
   const gateway = gatewayAddress();
-  // shortcut: one page (100 paid periods per wallet); page by key if labs renew more than that.
+  const now = Math.floor(Date.now() / 1000);
+  // shortcut: one page each (100 datasets, 100 legacy periods); page by key when the catalogue grows.
+  const catalogue = await pub.select({ $key: true }).from(Datasets).ownedBy(gateway).limit(100).fetch();
+  const onChain = await contractPaidUntil(address, catalogue.entities.map((d) => d.$key));
   const { entities } = await pub
     .select({ dataset: true, paidUntil: true })
     .from(Subscriptions, { onMismatch: "throw" })
-    .where(and(eq("subscriber", addr(address)), gt("paidUntil", u64(Math.floor(Date.now() / 1000)))))
+    .where(and(eq("subscriber", addr(address)), gt("paidUntil", u64(now))))
     .ownedBy(gateway)
     .limit(100)
     .fetch();
   const until = new Map<Hex, number>();
-  for (const s of entities) until.set(s.dataset.value, Math.max(until.get(s.dataset.value) ?? 0, Number(s.paidUntil.value)));
+  for (const [key, t] of onChain) if (t > now) until.set(key as Hex, t);
+  for (const s of entities) {
+    const k = s.dataset.value.toLowerCase() as Hex;
+    until.set(k, Math.max(until.get(k) ?? 0, Number(s.paidUntil.value)));
+  }
   const out: { key: Hex; name: string; paidUntil: number; filter: Filter }[] = [];
   for (const [key, paidUntil] of until) {
     const d = await pub.getEntity(key, Datasets).catch(() => null);
