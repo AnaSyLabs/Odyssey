@@ -72,12 +72,3 @@ export const Admins = defineSchema("odsy.admins", {
   grantedBy: addr(),
   grantedAt: u64(), // unix seconds
 });
-
-/** A testimonial: a user's image paired with their hash. Written by the gateway when an admin adds one. */
-export const Testimonials = defineSchema("odsy.testimonials", {
-  hash: str().indexed(), // 0x + 64 hex
-  mime: str(), // image/jpeg | image/png | image/webp
-  image: bytes(),
-  addedBy: addr(),
-  addedAt: u64().indexed(), // unix seconds; indexed to sort newest first
-});
