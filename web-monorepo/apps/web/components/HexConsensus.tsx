@@ -141,7 +141,7 @@ export default function HexConsensus({ dataset }: { dataset: Dataset }) {
           <LuEyeOff size={34} className="mx-auto text-[var(--st-cyan)]" />
           <p className="text-lg font-medium">Subscribe to open this source</p>
           <p className="text-sm text-[var(--st-on-var)]">Subscribers see every H3 cell this source covers, the validator committee behind each batch and its live consensus.</p>
-          <button className="btn primary w-full" onClick={() => setSubscribed(dataset.id, true)}>Subscribe · ${dataset.price}/h</button>
+          <button className="btn primary w-full" onClick={() => setSubscribed(dataset.id, true)}>Subscribe · {dataset.price} 0G / 30 days</button>
         </div>
       </main>
     );
@@ -160,7 +160,7 @@ export default function HexConsensus({ dataset }: { dataset: Dataset }) {
           <input className="field pl-10!" list="areas" placeholder="Search area, e.g. Bengaluru" value={area} onChange={(e) => setArea(e.target.value)} aria-label="Search by area" />
           <datalist id="areas">{areas.map((a) => <option key={a} value={a} />)}</datalist>
         </label>
-        <input className="field max-w-56" placeholder="Device, e.g. glasses-3f2a" value={device} onChange={(e) => setDevice(e.target.value)} aria-label="Filter by device ENS name" />
+        <input className="field max-w-56" placeholder="Device address, e.g. 0x3f2a" value={device} onChange={(e) => setDevice(e.target.value)} aria-label="Filter by device ENS name" />
         <div className="seg" role="group" aria-label="Time range">
           {(Object.keys(RANGES) as (keyof typeof RANGES)[]).map((r) => <button key={r} className={range === r ? "on" : ""} aria-pressed={range === r} onClick={() => setRange(r)}>{r}</button>)}
         </div>
