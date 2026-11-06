@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense } from "react";
-import { LuBookOpen, LuBox, LuCamera, LuChartNoAxesColumn, LuCircuitBoard, LuDatabase, LuGlasses, LuHexagon, LuLayers, LuMapPinned, LuMoon, LuPlugZap, LuReceipt, LuShieldCheck, LuSun } from "react-icons/lu";
+import { LuBookOpen, LuBox, LuCamera, LuChartNoAxesColumn, LuCircuitBoard, LuDatabase, LuGlasses, LuHexagon, LuLayers, LuMapPinned, LuMoon, LuPlugZap, LuQuote, LuReceipt, LuShieldCheck, LuSun } from "react-icons/lu";
 import Logo from "@/components/Logo";
 import SignInGate from "@/components/SignInGate";
 import { WalletButton, WalletProvider } from "@/components/wallet";
@@ -19,6 +19,7 @@ const NAV = [
   ["/capture", "Captures", LuCamera],
   ["/wiring", "Wiring & firmware", LuCircuitBoard],
   ["/docs", "Protocol docs", LuBookOpen],
+  ["/testimonials", "Testimonials", LuQuote],
   // Mockups: demo-data screens, kept for design until their backends exist.
   ["/mockups/datasets", "Mockup: consensus datasets", LuHexagon],
   ["/mockups/analytics", "Mockup: analytics", LuChartNoAxesColumn],
