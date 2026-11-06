@@ -82,6 +82,53 @@ Merged through PRs #1, #2, #4, #5 and #7.
 | `OdsySubscriptions` deployed to Galileo: `0xc3a946516f2f0CE3fc2065543cb0a8E9b105A54e`, tx `0xc83445b99003f52c1e12007bc8072edf5c95c54f7ae1b6cd4875b2c40f7ef980`, block 64,085,686; `owner()` and `contributorBps()` (7000) checked | (no commit: on-chain) |
 | Cause of the signed-in 500s traced to the missing `SUBSCRIPTIONS_ADDRESS` and fixed locally | (no commit: env only) |
 
+## M8. Plan, milestones and testing docs (6 Nov 2026)
+
+| Done | Commit |
+|---|---|
+| `PLAN.md` rewrite, `MILESTONE.md`, end-to-end `TESTING.md` | `998b6a5`, `58c846b`, `d42a0e1` |
+| `OdsySubscriptions` deploy recorded; sponsor track mapping and deployed contracts in README and protocol docs | `a91c1f7`, `408541d` |
+| Cash-flow section and diagram; payout claims corrected | `9f9ada6`, `51d7579` |
+| Merged to `main` (PRs #9, #10, #13) | `2fce039`, `3c58b28`, `69a2306` |
+
+## M9. MCP server (6 Nov 2026)
+
+| Done | Commit |
+|---|---|
+| MCP token, keyword ranking and JSON-RPC core with tests | `0093dfe` |
+| Datasets served over MCP at `/api/mcp` with bearer tokens; token card on the datasets page | `5d4c4c6`, `d840c73` |
+| Docs in README, protocol page and TESTING | `1f8747b` |
+| Per-client setup (Claude Code, Cursor, Claude Desktop, other); hosted-server docs | `e190fd0`, `d9bb2e2` |
+| Token-free `.mcp.json` for Claude Code without its CLI | `d1519ea`, `e7c9482` |
+| Merged to `main` (PRs #11, #15, #16) | `66debde`, `7194ecf`, `9dc4c99` |
+
+## M10. Admin grants (6 Nov 2026, Muneeb Illahi)
+
+| Done | Commit |
+|---|---|
+| Admin grants stored on Arkiv, `/api/admins` to list, grant and revoke, Admins page | `e4b7de7`, `8c88ddc`, `f7d2e40` |
+| Grants kept alive by the daily extend job; root vs granted admins documented | `3f2761d`, `57bd7f6` |
+| Merged to `main` (PR #14) | `213d08e` |
+
+## M11. Glasses firmware, World ID enrollment, live capture (6 Nov 2026, Mir Aatif Rafiq)
+
+| Done | Commit |
+|---|---|
+| `odsy_glasses_camera` streamer, enrollment and live capture screens | `96cd161` |
+| Signed touch-capture photos and real World ID enrollment | `3267436` |
+| Docs for `/enroll`, `/capture`, `/admin` and the firmware | `a9d3256` |
+| Explicit `WORLD_ENVIRONMENT` | `5d6f2c3` |
+| Merged to `main` (PRs #12, #18) | `a64c782`, `d2b762a` |
+
+## M12. Activity fix and live analytics (6 Nov 2026)
+
+| Done | Commit |
+|---|---|
+| `/api/activity` reads only the recent blocks the Arkiv RPC serves (no more 500); feed covers about 25 minutes | `97e1185`, `06743bc` |
+| Analytics helpers and payment time on `/api/subscriptions` | `f2bd62b` |
+| Live `/analytics` page with contributor, lab and platform views; docs | `1f5224d`, `c6d5299` |
+| Merged to `main` (PRs #17, #19) | `6eb329b`, `5bebd2c` |
+
 ## History note
 
 The first 25 commits were rewritten and force-pushed on 6 Nov 2026 (README, skills and web scaffold in smaller commits, no co-author trailers). Branches created before that kept the old hashes, so `git log main` also shows pre-rewrite duplicates. Use `git log --first-parent main` for the clean line.

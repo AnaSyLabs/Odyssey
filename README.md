@@ -389,7 +389,7 @@ Deploy the contract once:
 ```bash
 cd contracts
 git submodule update --init --recursive     # OpenZeppelin Contracts + forge-std
-forge test                                  # 14 tests, fuzzing included
+forge test                                  # 24 tests (14 subscriptions + 10 consensus), fuzzing included
 forge script script/DeploySubscriptions.s.sol --rpc-url galileo --broadcast --private-key $OG_PRIVATE_KEY
 # put the printed address in SUBSCRIPTIONS_ADDRESS, and the deploy block in SUBSCRIPTIONS_FROM_BLOCK
 ```
@@ -404,8 +404,8 @@ npm run dev                                 # gateway on http://localhost:3000
 npm run simulate -- 3                       # fake glasses: register, upload 3 signed samples from Bandra, query nearby
 npm run simulate -- 1 ./photo.jpg           # an image > 96 KiB goes through 0G
 npm run simulate -- 3 --kind sensor         # weather readings (kind=sensor, application/json)
-npm test                                    # geo, thinning, signature, encryption, session, reward-split tests (no network)
-npm run lab:ingest                          # with the LAB_* vars set: pull your datasets into apps/web/lab-data/
+npm test                                    # geo, thinning, signature, encryption, session, reward-split, MCP and analytics tests (no network)
+npm run lab:ingest                          # with the LAB_* vars set: pull your datasets into apps/web/lab-data/ (or LAB_OUT_DIR)
 npm run rewards:publish -- --dry-run        # preview the next reward epoch; drop --dry-run to publish it
 ```
 
