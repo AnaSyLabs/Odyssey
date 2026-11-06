@@ -243,7 +243,7 @@ claude mcp add --transport http odyssey https://<your-host>/api/mcp \\
         </Section>
 
         <Section id="pipeline" title="The pipeline">
-          <P>The full design. The <a href="#live" className="text-[var(--st-cyan)] hover:underline">table above</a> shows which parts are live.</P>
+          <P>The full design. The <a href="#live" className="text-[var(--st-cyan)] underline">table above</a> shows which parts are live.</P>
           <Figure n={3} title="From lens to ledger" w={1000} h={300}
             caption="Data never goes on-chain. Encrypted clips live in decentralized storage; the chain holds one Merkle root per batch, the stakes, the challenges and the reward roots.">
             <Group x={10} y={20} w={230} h={260} label="DEVICE" />

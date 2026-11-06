@@ -200,6 +200,27 @@ npm install
 npm run dev   # http://localhost:3000
 ```
 
+**Odi**, the glasses in the bottom-right corner, is the app's guide: its eyes follow your pointer and a click opens quick links to the docs, datasets, enrollment, wiring and this repo. It stays still when the system asks for reduced motion.
+
+### Lighthouse
+
+| Page | Performance | Accessibility | Best Practices | SEO |
+|---|---|---|---|---|
+| `/` | 100 | 100 | 100 | 100 |
+| `/datasets` | 98 | 100 | 100 | 100 |
+| `/explore` | 98 | 100 | 100 | 100 |
+| `/analytics` | 98 | 100 | 100 | 100 |
+| `/activity` | 98 | 100 | 100 | 100 |
+| `/docs` | 100 | 100 | 100 | 100 |
+| `/device` | 100 | 100 | 100 | 100 |
+| `/wiring` | 100 | 100 | 100 | 100 |
+
+Lighthouse 13.6, desktop preset, local production build (`next build && next start`), signed in, 6 Nov 2026. On the mobile preset the signed-in data pages score lower on Performance (about 77 to 79 on `/datasets` and `/activity`); the other categories stay at 100. To re-run one page:
+
+```bash
+npx lighthouse http://localhost:3000/datasets --preset=desktop --view
+```
+
 ## Directory structure
 
 ```

@@ -143,7 +143,7 @@ body { background: #f6f3ea; }
   --st-bright: #525252;
   --st-on: #f4f4f4;
   --st-on-var: #a6a6a6;
-  --st-outline: #7c7c7c;
+  --st-outline: #a0a0a0; /* 4.5:1 on --st-0..--st-2 for 10px eyebrow text */
   --st-line: rgba(255, 255, 255, 0.07);
   --st-edge: rgba(255, 255, 255, 0.1);
   --st-pod: rgba(28, 28, 28, 0.92);
@@ -173,7 +173,7 @@ body { background: #f6f3ea; }
   --st-bright: #d4d4d4;
   --st-on: #141414;
   --st-on-var: #525252;
-  --st-outline: #737373;
+  --st-outline: #666666;
   --st-line: rgba(20, 20, 20, 0.08);
   --st-edge: rgba(255, 255, 255, 0.9);
   --st-pod: rgba(255, 255, 255, 0.92);
@@ -288,3 +288,24 @@ body { background: #f6f3ea; }
 
 .lab .label { display: block; margin-bottom: 0.25rem; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted); }
 .lab select.lab-input { cursor: pointer; }
+
+/* Odi, the docked guide (components/Odi.tsx). Self-contained colours: it also renders outside .studio. */
+.odi { position: fixed; right: 16px; bottom: 16px; z-index: 60; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; --odi-x: 0px; --odi-y: 0px; }
+.odi-btn { width: 76px; height: 64px; padding: 6px; border-radius: 22px; border: 1px solid rgba(197, 244, 103, 0.35); background: rgba(20, 20, 20, 0.85); backdrop-filter: blur(12px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35); cursor: pointer; transition: transform 0.2s, border-color 0.2s; }
+.odi-btn:hover { transform: translateY(-2px); border-color: #c5f467; }
+.odi-btn:focus-visible { outline: 2px solid #c5f467; outline-offset: 3px; }
+.odi-btn svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.odi-body { animation: odi-bob 3.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.odi-pupils { transform: translate(var(--odi-x), var(--odi-y)); transition: transform 0.12s ease-out; }
+.odi-eyes { animation: odi-blink 5s infinite; transform-box: fill-box; transform-origin: center; }
+.odi-led { animation: odi-led 1.6s ease-in-out infinite; }
+.odi-btn[aria-expanded="true"] .odi-led { fill: #c5f467; }
+.odi-panel { width: min(280px, calc(100vw - 32px)); padding: 14px; border-radius: 18px; background: #1a1a1a; color: #f4f4f4; border: 1px solid #333; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4); font-size: 14px; }
+.odi-hi { margin: 0 0 10px; color: #c4c4c4; line-height: 1.4; }
+.odi-panel ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.odi-panel a { display: block; padding: 8px 10px; border-radius: 10px; color: #f4f4f4; text-decoration: none; }
+.odi-panel a:hover, .odi-panel a:focus-visible { background: #2b2b2b; color: #c5f467; outline: none; }
+@keyframes odi-bob { 0%, 100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-3px) rotate(1deg); } }
+@keyframes odi-blink { 0%, 94%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.1); } }
+@keyframes odi-led { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .odi-body, .odi-eyes, .odi-led { animation: none; } .odi-pupils { transition: none; } }

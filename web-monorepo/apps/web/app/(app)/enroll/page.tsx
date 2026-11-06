@@ -117,7 +117,7 @@ export default function EnrollPage() {
           <p>The glasses keep a secp256k1 key in flash and sign every photo with it. The gateway rejects photos from unenrolled keys.</p>
           <p>World ID proves a unique human approved this exact address, without revealing who. A second device for the same human is refused.</p>
           <p>Your signed-in wallet becomes the device&apos;s payout address, and can view the photos it captures.</p>
-          <p>Testing with a staging app? Open the request in <a className="text-[var(--st-cyan)] hover:underline" href="https://simulator.worldcoin.org" target="_blank" rel="noreferrer">simulator.worldcoin.org</a>.</p>
+          <p>Testing with a staging app? Open the request in <a className="text-[var(--st-cyan)] underline" href="https://simulator.worldcoin.org" target="_blank" rel="noreferrer">simulator.worldcoin.org</a>.</p>
         </aside>
       </div>
 
