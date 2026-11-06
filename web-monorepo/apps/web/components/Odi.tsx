@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import OdiTour from "@/components/OdiTour";
 
 const LINKS = [
   ["/docs", "How Odyssey works"],
@@ -13,6 +14,7 @@ const LINKS = [
 /** Odi, the Odyssey guide: a round robot avatar docked bottom-right whose glowing eyes follow the pointer. */
 export default function Odi() {
   const [open, setOpen] = useState(false);
+  const [tour, setTour] = useState<number | null>(null);
   const root = useRef<HTMLDivElement>(null);
 
   // The eyes follow the pointer (up to 4 units, so they stay on the visor): write CSS vars straight to the DOM so moving the mouse never re-renders.
@@ -45,10 +47,12 @@ export default function Odi() {
 
   return (
     <div ref={root} className="odi">
-      {open && (
+      {tour !== null && <OdiTour step={tour} setStep={setTour} />}
+      {open && tour === null && (
         <nav className="odi-panel" aria-label="Odi quick links">
           <p className="odi-hi">Hi, I&apos;m Odi. I see the world so AI can learn from it. Where to?</p>
           <ul>
+            <li><button type="button" className="odi-tour-btn" onClick={() => { setOpen(false); setTour(0); }}>Take the tour ★</button></li>
             {LINKS.map(([href, label]) => (
               <li key={href}>
                 {href.startsWith("http")
@@ -59,7 +63,7 @@ export default function Odi() {
           </ul>
         </nav>
       )}
-      <button type="button" className="odi-btn" aria-label="Odi, the Odyssey guide: open quick links" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+      <button type="button" className="odi-btn" aria-label="Odi, the Odyssey guide: open quick links" aria-expanded={open} onClick={() => { setTour(null); setOpen((o) => !o); }}>
         <svg viewBox="0 0 100 100" aria-hidden focusable="false">
           <defs>
             <radialGradient id="odi-dome" cx="35%" cy="25%" r="80%">

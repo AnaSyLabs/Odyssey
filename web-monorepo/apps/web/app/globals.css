@@ -309,3 +309,20 @@ body { background: #f6f3ea; }
 @keyframes odi-blink { 0%, 94%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.1); } }
 @keyframes odi-led { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 @media (prefers-reduced-motion: reduce) { .odi-body, .odi-eyes, .odi-led { animation: none; } .odi-pupils { transition: none; } }
+
+/* Odi's tour (components/OdiTour.tsx): a spotlight on the page and a speech bubble above Odi. */
+.odi-tour-btn { display: block; width: 100%; text-align: left; padding: 8px 10px; border-radius: 10px; background: #c5f467; color: #07090e; font-weight: 600; cursor: pointer; margin-bottom: 4px; }
+.odi-tour-btn:hover, .odi-tour-btn:focus-visible { filter: brightness(1.06); outline: none; }
+.odi-spot { position: fixed; z-index: 55; border-radius: 18px; border: 2px solid #c5f467; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55), 0 0 24px rgba(197, 244, 103, 0.45); pointer-events: none; transition: top 0.3s, left 0.3s, width 0.3s, height 0.3s; }
+.odi-bubble { position: relative; width: min(320px, calc(100vw - 32px)); padding: 16px; border-radius: 18px; background: #1a1a1a; color: #f4f4f4; border: 2px solid #c5f467; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5); animation: odi-pop 0.25s ease-out; }
+.odi-bubble::after { content: ""; position: absolute; right: 24px; bottom: -9px; width: 16px; height: 16px; background: #1a1a1a; border-right: 2px solid #c5f467; border-bottom: 2px solid #c5f467; transform: rotate(45deg); }
+.odi-step { margin: 0; font-size: 11px; letter-spacing: 0.06em; color: #a0a0a0; }
+.odi-title { margin: 2px 0 6px; font-size: 17px; font-weight: 600; color: #c5f467; }
+.odi-text { margin: 0 0 14px; min-height: 4.2em; font-size: 14px; line-height: 1.5; color: #e6e6e6; }
+.odi-actions { display: flex; gap: 8px; align-items: center; }
+.odi-actions button { padding: 6px 12px; border-radius: 9999px; border: 1px solid #3c3c3c; color: #f4f4f4; font-size: 13px; cursor: pointer; }
+.odi-actions button:focus-visible { outline: 2px solid #c5f467; outline-offset: 2px; }
+.odi-actions .odi-skip { margin-right: auto; border-color: transparent; color: #a0a0a0; padding-left: 0; }
+.odi-actions .odi-next { background: #c5f467; color: #07090e; border-color: transparent; font-weight: 600; }
+@keyframes odi-pop { from { opacity: 0; transform: translateY(6px) scale(0.97); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .odi-bubble { animation: none; } .odi-spot { transition: none; } }
