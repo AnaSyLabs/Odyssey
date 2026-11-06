@@ -6,6 +6,8 @@ import { isBanned } from "@/lib/consensus";
 import { getSession, unauthorized } from "@/lib/session";
 
 const ACTION = "register-device";
+// "staging" pairs with simulator.worldcoin.org; real World App proofs need "production".
+const ENVIRONMENT = process.env.WORLD_ENVIRONMENT === "staging" ? "staging" : "production";
 
 const fail = (status: number, error: string) => Response.json({ error }, { status });
 
@@ -17,7 +19,7 @@ export async function GET() {
   return Response.json({
     app_id: appId,
     action: ACTION,
-    environment: appId.startsWith("app_staging_") ? "staging" : "production",
+    environment: ENVIRONMENT,
     rp_context: { rp_id: need("WORLD_RP_ID"), nonce: sig.nonce, created_at: sig.createdAt, expires_at: sig.expiresAt, signature: sig.sig },
   });
 }
@@ -34,6 +36,7 @@ export async function POST(req: Request) {
   const device = getAddress(b.device);
   const proof = b.result.responses?.[0];
   if (b.result.action !== ACTION || !proof?.nullifier) return fail(400, "not a register-device proof");
+  if (b.result.environment !== ENVIRONMENT) return fail(400, `proof is from ${b.result.environment}, this app expects ${ENVIRONMENT}`);
   // The proof must commit to this device, or one human's proof could enroll any device.
   if (proof.signal_hash?.toLowerCase() !== hashSignal(device).toLowerCase()) return fail(400, "proof is not bound to this device address");
   // Fail before World ID records the verification, so the human can retry with the right device.

@@ -129,7 +129,7 @@ Every request is self-contained, so the gateway runs on Vercel.
 
 ## 6. Operational Guide
 
-1. **World ID app:** in the World developer portal, create a staging app (`app_staging_…`) with an action named `register-device`, and set `WORLD_APP_ID`, `WORLD_RP_ID` and `WORLD_RP_SIGNING_KEY` in `.env.local` (see `.env.example`).
+1. **World ID app:** in the World developer portal, create an app with an action named `register-device`, and set `WORLD_APP_ID`, `WORLD_RP_ID` and `WORLD_RP_SIGNING_KEY` in `.env.local` and `WORLD_ENVIRONMENT=staging` (see `.env.example`).
 2. **Flash the glasses:** set Wi-Fi, `ingestUrl` and location in the sketch, flash, and note the address and MAC on the OLED (also on the serial monitor at 115200 baud).
 3. **Enroll:** open `/enroll`, sign in with your wallet, enter the address and MAC, click **Verify with World ID**, and approve the request in [simulator.worldcoin.org](https://simulator.worldcoin.org) with an Orb credential.
 4. **Capture:** touch IO13. The photo appears on `/capture?device=<address>` within a few seconds, with its signature checked by the server.
