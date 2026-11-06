@@ -72,7 +72,7 @@ export function cellsFor(d: Dataset): Cell[] {
   return areasOf(d).flatMap((area) => {
     const [lat, lng] = CITIES[area];
     const origin = latLngToCell(lat, lng, RES);
-    const pool = Array.from({ length: 12 }, (_, i) => `glasses-${hexStr(seeded(`${d.id}-${area}-${i}`), 4)}.odsy.eth`);
+    const pool = Array.from({ length: 12 }, (_, i) => { const r = seeded(`${d.id}-${area}-${i}`); return `0x${hexStr(r, 4)}…${hexStr(r, 4)}`; });
 
     return gridDisk(origin, RINGS).flatMap((id) => {
       const r = seeded(`${d.id}-${id}`);

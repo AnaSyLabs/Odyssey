@@ -33,7 +33,7 @@ openssl rand -hex 16   # REGISTRAR_TOKEN and again for CRON_SECRET
 
 ```bash
 cd contracts && forge test            # expect 24 passed: 14 subscriptions + 10 consensus
-cd ../web-monorepo && npm test        # expect pass 13, fail 0
+cd ../web-monorepo && npm test        # expect pass 22, fail 0
 npm run build                         # compiles, lists /mockups and the live routes
 ```
 
@@ -175,6 +175,9 @@ With `npm run dev` running, open each and check it loads without errors:
 - [ ] `/mockups` and its four screens open without sign-in
 - [ ] `/datasets`, `/explore`, `/activity` show the sign-in overlay until a wallet signs in
 - [ ] `/device`, `/wiring`, `/docs` open without sign-in; `/docs` links the deployed contract
+- [ ] `/analytics` shows the sign-in overlay until a wallet signs in, then three views for an admin (Contributor earnings, Lab spend, Platform) and two for everyone else
+- [ ] after a subscription, Lab spend shows the payment with a date and a working tx link, and the Platform view splits it 70 / 30
+- [ ] after publishing and claiming an epoch, Contributor earnings shows it as claimed and the Claimable figure drops to 0
 
 ## 5. MCP server
 

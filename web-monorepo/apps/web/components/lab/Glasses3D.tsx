@@ -5,7 +5,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 
-type Props = { lesson: number; hudState: string; prompt: string; dark?: boolean; exploded?: boolean; wireframe?: boolean };
+type Props = { lesson: number; hudState: string; prompt: string; dark?: boolean; exploded?: boolean; lineup?: boolean; wireframe?: boolean };
 
 // Exploded-view offset per part group from `build`; x points outward from the centre line.
 const OFF: Record<string, [number, number, number]> = {
@@ -15,13 +15,25 @@ const OFF: Record<string, [number, number, number]> = {
   board: [2.8, 0.9, 0], battery: [2.6, -0.9, 0], speaker: [2.2, -0.4, -0.8],
 };
 
+// Lineup view: the same parts pulled apart front to back in assembly order (z), like a product sheet; x and y stay put.
+const LINE: Record<string, [number, number]> = {
+  lens: [0, 4.6], display: [0.3, 3.8], camera: [0.6, 3.3], rim: [0, 2.6], bridge: [0.5, 2.6], pads: [-0.5, 2.2], ir: [-0.7, 2.2],
+  mic: [0.9, 1.4], wire: [0.7, 0.9], hinge: [0, 0.4], temple: [0, -0.4], touch: [0.9, -1.2], pod: [0, -1.4],
+  board: [0.9, -2.6], battery: [-0.9, -3.4], speaker: [-0.6, -2.2],
+};
+const lineOffset = (sec: string) => {
+  const [y, z] = LINE[sec] ?? [0, 0];
+  return new THREE.Vector3(0, y, z);
+};
+
 const offset = (sec: string, x: number) => {
   const [ox, oy, oz] = OFF[sec] ?? [0, 0, 0];
   return new THREE.Vector3(ox * Math.sign(x), oy, oz);
 };
 const MAX_OFF = Math.max(...Object.values(OFF).map(([x, y, z]) => Math.hypot(x, y, z)));
+const MAX_LINE = Math.max(...Object.values(LINE).map(([y, z]) => Math.hypot(y, z)));
 /** Far-travelling parts start later, so the frame opens first and the internals fan out after it. */
-const lag = (off: THREE.Vector3) => 0.35 * (off.length() / MAX_OFF);
+const lag = (off: THREE.Vector3, max = MAX_OFF) => 0.35 * (off.length() / max);
 const stagger = (k: number, lagBy: number) => {
   const x = Math.min(1, Math.max(0, (k - lagBy) / (1 - lagBy)));
   return x * x * (3 - 2 * x);
@@ -29,7 +41,7 @@ const stagger = (k: number, lagBy: number) => {
 
 /** Each part of a `build` group with its assembled position and exploded-view offset. */
 export function explodeParts(g: THREE.Group) {
-  return g.children.map((m) => ({ m, base: m.position.clone(), off: offset(m.userData.sec as string, m.position.x) }));
+  return g.children.map((m) => ({ m, base: m.position.clone(), off: offset(m.userData.sec as string, m.position.x), line: lineOffset(m.userData.sec as string) }));
 }
 
 const INK = 0x1e2022;
@@ -50,8 +62,8 @@ const PARTS = [
 ] as const;
 const CALLOUTS = PARTS.map((p) => {
   const at = new THREE.Vector3(...p.at);
-  const off = offset(p.sec, at.x);
-  return { at, off, lag: lag(off), only: "only" in p };
+  const off = offset(p.sec, at.x), line = lineOffset(p.sec);
+  return { at, off, lag: lag(off), line, lineLag: lag(line, MAX_LINE), only: "only" in p };
 });
 
 function rrect(w: number, h: number, r: number) {
@@ -259,13 +271,13 @@ export function build() {
   return { g, tex, hud, ir, coneMat, status };
 }
 
-export default function Glasses3D({ lesson, hudState, prompt, dark = false, exploded = false, wireframe = false }: Props) {
+export default function Glasses3D({ lesson, hudState, prompt, dark = false, exploded = false, lineup = false, wireframe = false }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const labels = useRef<(HTMLDivElement | null)[]>([]);
   const live = useRef({ hudState, prompt });
   const redraw = useRef<() => void>(() => {});
   const theme = useRef<(dark: boolean) => void>(() => {});
-  const view = useRef({ exploded, wire: (on: boolean) => void on });
+  const view = useRef({ exploded, lineup, wire: (on: boolean) => void on });
 
   useEffect(() => {
     live.current = { hudState, prompt };
@@ -311,13 +323,13 @@ export default function Glasses3D({ lesson, hudState, prompt, dark = false, expl
     scene.add(fill);
 
     const { g: glasses, tex, hud, ir, coneMat, status } = build();
-    const parts = explodeParts(glasses).map((p) => ({ ...p, lag: lag(p.off) }));
+    const parts = explodeParts(glasses).map((p) => ({ ...p, lag: lag(p.off), lineLag: lag(p.line, MAX_LINE) }));
     // guide lines: each section's centre back to where it sits when assembled
-    const groups = new Map<string, { base: THREE.Vector3; off: THREE.Vector3; lag: number; n: number }>();
+    const groups = new Map<string, { base: THREE.Vector3; off: THREE.Vector3; lag: number; line: THREE.Vector3; lineLag: number; n: number }>();
     for (const p of parts) {
-      if (!p.off.lengthSq()) continue;
+      if (!p.off.lengthSq() && !p.line.lengthSq()) continue;
       const key = `${p.m.userData.sec}:${Math.sign(p.m.position.x)}`;
-      const gr = groups.get(key) ?? { base: new THREE.Vector3(), off: p.off, lag: p.lag, n: 0 };
+      const gr = groups.get(key) ?? { base: new THREE.Vector3(), off: p.off, lag: p.lag, line: p.line, lineLag: p.lineLag, n: 0 };
       gr.base.add(p.base);
       gr.n++;
       groups.set(key, gr);
@@ -434,27 +446,31 @@ export default function Glasses3D({ lesson, hudState, prompt, dark = false, expl
     const t0 = performance.now();
     const v = new THREE.Vector3();
     let amp = 0;
-    let k = 0;
+    let k = 0; // 0 = assembled, 1 = exploded
+    let kl = 0; // 0 = assembled, 1 = lineup
     let raf = 0;
     const frame = () => {
       raf = requestAnimationFrame(frame);
       if (!onScreen) return;
       const t = (performance.now() - t0) / 1000;
-      const goal = view.current.exploded ? 1 : 0;
-      if (k !== goal) {
-        k = reduced || Math.abs(goal - k) < 0.002 ? goal : k + (goal - k) * 0.08;
-        for (const p of parts) p.m.position.copy(p.base).addScaledVector(p.off, stagger(k, p.lag));
+      const goal = view.current.exploded ? 1 : 0, lineGoal = view.current.lineup ? 1 : 0;
+      const ease = (x: number, to: number) => (reduced || Math.abs(to - x) < 0.002 ? to : x + (to - x) * 0.08);
+      if (k !== goal || kl !== lineGoal) {
+        k = ease(k, goal);
+        kl = ease(kl, lineGoal);
+        for (const p of parts) p.m.position.copy(p.base).addScaledVector(p.off, stagger(k, p.lag)).addScaledVector(p.line, stagger(kl, p.lineLag));
         guides.forEach((gr, i) => {
           gr.base.toArray(guidePos, i * 6);
-          v.copy(gr.base).addScaledVector(gr.off, stagger(k, gr.lag)).toArray(guidePos, i * 6 + 3);
+          v.copy(gr.base).addScaledVector(gr.off, stagger(k, gr.lag)).addScaledVector(gr.line, stagger(kl, gr.lineLag)).toArray(guidePos, i * 6 + 3);
         });
         guideGeo.attributes.position.needsUpdate = true;
-        guideMat.opacity = 0.35 * k;
-        pivot.scale.setScalar(1 - 0.22 * k); // the exploded view is ~2x wider; keep it in frame
+        guideMat.opacity = 0.35 * Math.max(k, kl);
+        // both views are ~2x the assembled size; keep them in frame
+        pivot.scale.setScalar(1 - 0.22 * k - 0.28 * kl);
       }
-      // the exploded view holds still at a three-quarter angle so the parts don't overlap
-      amp += ((idle && !reduced && !view.current.exploded ? 0.6 : 0) - amp) * 0.04;
-      pivot.rotation.y = amp * Math.sin(t * 0.5) + 0.4 * k;
+      // both pulled-apart views hold still; the lineup turns so the front-to-back row runs across the screen, lens on the left
+      amp += ((idle && !reduced && !view.current.exploded && !view.current.lineup ? 0.6 : 0) - amp) * 0.04;
+      pivot.rotation.y = amp * Math.sin(t * 0.5) + 0.4 * k - 0.9 * kl;
       const bob = reduced ? 0 : Math.sin(t * 1.2);
       pivot.position.y = bob * 0.07;
       shadow.scale.setScalar(1 - bob * 0.04);
@@ -471,12 +487,12 @@ export default function Glasses3D({ lesson, hudState, prompt, dark = false, expl
       CALLOUTS.forEach((c, i) => {
         const node = labels.current[i];
         if (!node) return;
-        v.copy(c.at).addScaledVector(c.off, stagger(k, c.lag));
+        v.copy(c.at).addScaledVector(c.off, stagger(k, c.lag)).addScaledVector(c.line, stagger(kl, c.lineLag));
         glasses.localToWorld(v);
         const far = v.distanceTo(camera.position) - centre > 1.5;
         v.project(camera);
         node.style.transform = `translate(${((v.x + 1) / 2) * w}px, ${((1 - v.y) / 2) * h}px)`;
-        const shown = c.only ? k > 0.6 : true;
+        const shown = c.only ? Math.max(k, kl) > 0.6 : true;
         node.style.opacity = !shown ? "0" : far ? "0.25" : "1";
       });
     };
@@ -505,28 +521,33 @@ export default function Glasses3D({ lesson, hudState, prompt, dark = false, expl
 
   useEffect(() => theme.current(dark), [dark]);
   useEffect(() => void (view.current.exploded = exploded), [exploded]);
+  useEffect(() => void (view.current.lineup = lineup), [lineup]);
   useEffect(() => view.current.wire(wireframe), [wireframe]);
 
   return (
     <div className="relative h-full min-h-[380px] w-full overflow-hidden">
       <div ref={host} className="absolute inset-0 touch-none" role="img" aria-label="Interactive 3D model of the Odyssey capture glasses. Drag to rotate." />
+      <div className={`pointer-events-none absolute bottom-5 left-5 border-l-2 border-[var(--st-cyan)] pl-3 transition-opacity duration-500 ${exploded || lineup ? "opacity-100" : "opacity-0"}`} aria-hidden>
+        <p className="text-lg font-semibold leading-tight">Odyssey capture glasses</p>
+        <p className="text-sm text-[var(--st-on-var)]">3D {lineup ? "lineup" : "exploded"} view</p>
+      </div>
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
         {PARTS.map((p, i) => {
           const on = (p.lessons as readonly number[]).includes(lesson);
+          const dx = p.dx * 1.6, dy = p.dy * 1.4; // longer leaders keep the boxes clear of the parts
           return (
             <div key={p.id} ref={(n) => { labels.current[i] = n; }} className="absolute left-0 top-0 transition-opacity duration-200">
+              {/* leader: out from the part at an angle, then level into the box, as on a product sheet */}
               <svg className="absolute left-0 top-0 overflow-visible" width="1" height="1">
-                <line x1="0" y1="0" x2={p.dx} y2={p.dy} stroke="var(--st-cyan)" strokeOpacity="0.45" strokeWidth="1" />
+                <path d={`M0 0L${dx * 0.55} ${dy}H${dx}`} fill="none" stroke="var(--st-cyan)" strokeOpacity={on ? 0.95 : 0.7} strokeWidth="1.25" />
               </svg>
-              <span className="pod absolute -left-2.5 -top-2.5 grid size-5 place-items-center rounded-full">
-                <span className={`size-2 rounded-full ${on ? "animate-pulse bg-[var(--st-cyan)] shadow-[0_0_8px_var(--st-cyan)]" : "bg-[var(--st-outline)]"}`} />
-              </span>
+              <span className={`absolute -left-[4px] -top-[4px] size-2 rounded-full bg-[var(--st-cyan)] ${on ? "animate-pulse shadow-[0_0_8px_var(--st-cyan)]" : ""}`} />
               <span
-                className="pod mono absolute whitespace-nowrap rounded-md px-2.5 py-1 text-[10px] leading-tight"
-                style={{ left: p.dx, top: p.dy, transform: p.dx < 0 ? "translate(-100%,-50%)" : "translateY(-50%)" }}
+                className={`pod absolute whitespace-nowrap rounded-lg border px-3 py-1.5 leading-snug ${on ? "border-[var(--st-cyan)]" : "border-[color-mix(in_srgb,var(--st-cyan)_40%,transparent)]"}`}
+                style={{ left: dx, top: dy, transform: dx < 0 ? "translate(-100%,-50%)" : "translateY(-50%)" }}
               >
-                <b className={`block font-medium uppercase tracking-wide ${on ? "text-[var(--st-cyan)]" : "text-[var(--st-primary)]"}`}>{p.title}</b>
-                <span className="block text-[var(--st-on-var)]">{p.sub}</span>
+                <b className={`block text-[12px] font-semibold ${on ? "text-[var(--st-cyan)]" : "text-[var(--st-on)]"}`}>{p.title}</b>
+                <span className="block text-[11px] text-[var(--st-on-var)]">({p.sub})</span>
               </span>
             </div>
           );

@@ -2,7 +2,7 @@ import { asc, eq } from "@arkiv-network/sdk/query";
 import { addr } from "@arkiv-network/sdk/schema";
 import { formatEther } from "viem";
 import { arkivPublic, gatewayAddress } from "@/lib/arkiv";
-import { subscribedEvents } from "@/lib/contract";
+import { ogPublic, subscribedEvents } from "@/lib/contract";
 import { Datasets, Subscriptions } from "@/lib/schema";
 import { getSession, unauthorized } from "@/lib/session";
 
@@ -21,14 +21,19 @@ export async function GET() {
   ]);
 
   const now = Date.now() / 1000;
+  // When each payment was made: the block's timestamp. shortcut: one RPC call per distinct block; cache once history is long.
+  const paidAt = new Map<bigint, number>();
+  for (const b of new Set(events.map((e) => e.blockNumber))) {
+    paidAt.set(b, Number((await ogPublic().getBlock({ blockNumber: b })).timestamp));
+  }
   const rows = [
     ...events.map((e) => ({
       key: `${e.transactionHash}-${e.logIndex}`, subscriber: e.args.subscriber!, dataset: e.args.dataset!, txHash: e.transactionHash,
-      amount: formatEther(e.args.amount!), toContributors: formatEther(e.args.toContributors!), paidUntil: Number(e.args.paidUntil), legacy: false,
+      amount: formatEther(e.args.amount!), toContributors: formatEther(e.args.toContributors!), paidUntil: Number(e.args.paidUntil), paidAt: paidAt.get(e.blockNumber), legacy: false,
     })),
     ...legacy.entities.map((s) => ({
       key: s.$key, subscriber: s.subscriber.value, dataset: s.dataset.value, txHash: s.txHash.value,
-      amount: formatEther(s.amount.value), toContributors: "0", paidUntil: Number(s.paidUntil.value), legacy: true,
+      amount: formatEther(s.amount.value), toContributors: "0", paidUntil: Number(s.paidUntil.value), paidAt: undefined, legacy: true,
     })),
   ];
   const names = new Map<string, string>();

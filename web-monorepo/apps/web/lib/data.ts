@@ -2,31 +2,29 @@
 
 export type Sample = {
   id: string;
-  device: string;
+  device: string; // the glasses' address, as recovered from the sample signature
   at: string;
   place: string;
-  seconds: number;
+  kind: "image" | "video" | "audio" | "sensor";
+  storage: "Arkiv" | "0G Storage"; // payloads over 96 KiB go to 0G, the rest inline on Arkiv
   hash: string;
   signature: string;
-  witnesses: number;
   score: number;
   status: "verified" | "challenge" | "rejected";
 };
 
+// Mirrors a live dataset: a saved filter over samples (area, kinds), sold as a 30-day subscription in 0G.
 export type Dataset = {
   id: string;
   name: string;
   blurb: string;
-  modalities: string[];
-  hours: number;
+  modalities: string[]; // sample kinds, as on the live page
+  area: string;
   samples: number;
   devices: number;
   regions: string[];
   quality: number;
-  price: number;
-  license: "Research" | "Commercial" | "Exclusive";
-  batchRoot: string;
-  anchoredAt: string;
+  price: number; // 0G per 30 days
   preview: Sample[];
 };
 
@@ -40,15 +38,15 @@ export const hex = (seed: number, len: number) => {
   return `0x${out.slice(0, len)}`;
 };
 
-const sample = (seed: number, place: string, status: Sample["status"] = "verified"): Sample => ({
+const sample = (seed: number, place: string, kind: Sample["kind"], status: Sample["status"] = "verified"): Sample => ({
   id: `s-${seed}`,
-  device: `glasses-${hex(seed + 7, 6).slice(2)}`,
+  device: hex(seed + 7, 40),
   at: new Date(Date.UTC(2026, 9, 1 + (seed % 28), 6 + (seed % 14), (seed * 7) % 60)).toISOString(),
   place,
-  seconds: 10,
+  kind,
+  storage: kind === "video" ? "0G Storage" : "Arkiv",
   hash: hex(seed, 64),
   signature: hex(seed + 99, 130),
-  witnesses: seed % 4,
   score: status === "rejected" ? 0.21 : 0.78 + ((seed * 13) % 21) / 100,
   status,
 });
@@ -57,45 +55,35 @@ export const DATASETS: Dataset[] = [
   {
     id: "kitchen-egocentric",
     name: "Kitchen tasks, first person",
-    blurb: "Cooking, cleaning and tidying from the wearer's eyes, with gaze. Built for household-robot manipulation policies.",
-    modalities: ["Video", "Audio", "Gaze", "IMU"],
-    hours: 1240, samples: 446_400, devices: 312, regions: ["IN", "DE", "US"],
-    quality: 0.93, price: 18, license: "Commercial",
-    batchRoot: hex(11, 64), anchoredAt: "2026-11-02",
-    preview: [sample(1, "Bengaluru, IN"), sample(2, "Berlin, DE"), sample(3, "Austin, US", "challenge")],
+    blurb: "Cooking, cleaning and tidying from the wearer's eyes. Built for household-robot manipulation policies.",
+    modalities: ["image", "video", "audio"], area: "Bengaluru, Berlin, Austin · 5 km each",
+    samples: 446_400, devices: 312, regions: ["IN", "DE", "US"], quality: 0.93, price: 1.8,
+    preview: [sample(1, "Bengaluru, IN", "video"), sample(2, "Berlin, DE", "image"), sample(3, "Austin, US", "image", "challenge")],
   },
   {
     id: "street-navigation",
     name: "Street navigation",
     blurb: "Walking routes through dense cities: crossings, crowds, signage. For embodied navigation and assistive agents.",
-    modalities: ["Video", "Gaze", "IMU", "GPS"],
-    hours: 860, samples: 309_600, devices: 204, regions: ["IN", "JP", "BR"],
-    quality: 0.89, price: 14, license: "Commercial",
-    batchRoot: hex(12, 64), anchoredAt: "2026-10-29",
-    preview: [sample(4, "Tokyo, JP"), sample(5, "Mumbai, IN"), sample(6, "São Paulo, BR")],
+    modalities: ["image", "video", "sensor"], area: "Tokyo, Mumbai, São Paulo · 3 km each",
+    samples: 309_600, devices: 204, regions: ["IN", "JP", "BR"], quality: 0.89, price: 1.4,
+    preview: [sample(4, "Tokyo, JP", "video"), sample(5, "Mumbai, IN", "image"), sample(6, "São Paulo, BR", "sensor")],
   },
   {
     id: "workshop-tools",
     name: "Workshop and tool use",
-    blurb: "Hands-on repair, assembly and tool handling, with fine gaze on the work piece. Rare, high-skill demonstrations.",
-    modalities: ["Video", "Audio", "Gaze"],
-    hours: 310, samples: 111_600, devices: 58, regions: ["DE", "US"],
-    quality: 0.95, price: 32, license: "Exclusive",
-    batchRoot: hex(13, 64), anchoredAt: "2026-11-04",
-    preview: [sample(7, "Stuttgart, DE"), sample(8, "Detroit, US"), sample(9, "Munich, DE", "rejected")],
+    blurb: "Hands-on repair, assembly and tool handling, close up on the work piece. Rare, high-skill demonstrations.",
+    modalities: ["image", "video", "audio"], area: "Stuttgart, Detroit, Munich · 2 km each",
+    samples: 111_600, devices: 58, regions: ["DE", "US"], quality: 0.95, price: 3.2,
+    preview: [sample(7, "Stuttgart, DE", "video"), sample(8, "Detroit, US", "image"), sample(9, "Munich, DE", "image", "rejected")],
   },
   {
     id: "multilingual-speech",
     name: "Everyday multilingual speech",
-    blurb: "Natural conversations in markets, transit and homes. Consented speakers, faces blurred at the gateway.",
-    modalities: ["Audio", "Video"],
-    hours: 2100, samples: 756_000, devices: 540, regions: ["IN", "NG", "ID", "MX"],
-    quality: 0.86, price: 6, license: "Research",
-    batchRoot: hex(14, 64), anchoredAt: "2026-10-31",
-    preview: [sample(10, "Lagos, NG"), sample(11, "Jakarta, ID"), sample(12, "Delhi, IN")],
+    blurb: "Natural conversations in markets, transit and homes. Consented speakers, encrypted at the gateway.",
+    modalities: ["audio", "video"], area: "Lagos, Jakarta, Delhi · 10 km each",
+    samples: 756_000, devices: 540, regions: ["IN", "NG", "ID", "MX"], quality: 0.86, price: 0.6,
+    preview: [sample(10, "Lagos, NG", "audio"), sample(11, "Jakarta, ID", "audio"), sample(12, "Delhi, IN", "video")],
   },
 ];
-
-export const STATS = { hours: 4510, devices: 1114, validators: 86, verifiedShare: 0.97 };
 
 export const short = (h: string, a = 8, b = 6) => `${h.slice(0, a)}…${h.slice(-b)}`;

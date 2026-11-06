@@ -70,7 +70,7 @@ export async function handleRpc(msg: Rpc, tools: Tool[]) {
     case "ping":
       return ok(msg.id, {});
     case "tools/list":
-      return ok(msg.id, { tools: tools.map(({ run, ...t }) => t) });
+      return ok(msg.id, { tools: tools.map((t) => ({ name: t.name, description: t.description, inputSchema: t.inputSchema })) });
     case "tools/call": {
       const tool = tools.find((t) => t.name === msg.params?.name);
       if (!tool) return err(msg.id, -32602, `unknown tool ${String(msg.params?.name)}`);

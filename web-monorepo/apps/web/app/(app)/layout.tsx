@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense } from "react";
-import { LuBookOpen, LuBox, LuCamera, LuChartNoAxesColumn, LuCircuitBoard, LuDatabase, LuGlasses, LuHexagon, LuLayers, LuMapPinned, LuMoon, LuPlugZap, LuReceipt, LuShieldCheck, LuSun } from "react-icons/lu";
+import { LuBookOpen, LuBox, LuCamera, LuChartNoAxesColumn, LuCircuitBoard, LuDatabase, LuGlasses, LuHexagon, LuLayers, LuMapPinned, LuMoon, LuPlugZap, LuQuote, LuReceipt, LuShieldCheck, LuSun } from "react-icons/lu";
 import Logo from "@/components/Logo";
 import SignInGate from "@/components/SignInGate";
 import { WalletButton, WalletProvider } from "@/components/wallet";
@@ -12,12 +12,14 @@ const NAV = [
   ["/datasets", "Datasets", LuDatabase],
   ["/explore", "Explore samples", LuMapPinned],
   ["/activity", "Transactions", LuReceipt],
+  ["/analytics", "Analytics", LuChartNoAxesColumn],
   ["/admin", "Admins", LuShieldCheck],
   ["/device", "Capture device", LuBox],
   ["/enroll", "Enroll device", LuShieldCheck],
   ["/capture", "Captures", LuCamera],
   ["/wiring", "Wiring & firmware", LuCircuitBoard],
   ["/docs", "Protocol docs", LuBookOpen],
+  ["/testimonials", "Testimonials", LuQuote],
   // Mockups: demo-data screens, kept for design until their backends exist.
   ["/mockups/datasets", "Mockup: consensus datasets", LuHexagon],
   ["/mockups/analytics", "Mockup: analytics", LuChartNoAxesColumn],
@@ -26,7 +28,7 @@ const NAV = [
   ["/mockups", "Mockups", LuLayers],
 ] as const;
 // Pages backed by the gateway; everything else (landing, docs, device, wiring, /mockups) stays open.
-const LIVE = ["/datasets", "/explore", "/activity", "/admin", "/enroll", "/capture"];
+const LIVE = ["/datasets", "/explore", "/activity", "/analytics", "/admin", "/enroll", "/capture"];
 
 // The dataset map route has a request-time param, so the shell reads usePathname() inside Suspense (Cache Components).
 export default function AppLayout({ children }: { children: React.ReactNode }) {

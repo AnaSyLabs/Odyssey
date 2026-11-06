@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "odyssey": {
+      "type": "http",
+      "url": "${ODYSSEY_URL:-https://odyssey-blush-seven.vercel.app}/api/mcp",
+      "headers": {
+        "Authorization": "Bearer ${ODYSSEY_TOKEN}"
+      }
+    }
+  }
+}

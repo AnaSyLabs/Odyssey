@@ -89,6 +89,8 @@ Slashing only happens on **objective evidence** (bad signature, duplicate, faile
 
 How the project maps to the sponsor tracks it targets. Each row says what is built, where it lives, and how to see it. Honest status is in the last column.
 
+For a walk through one track at a time, with diagrams and a demo path for each, see [docs/TRACKS.md](docs/TRACKS.md).
+
 ### Arkiv: the data layer
 
 | What we built | Where | Status |
@@ -174,6 +176,7 @@ A Next.js app and gateway in `web-monorepo/apps/web`. Live pages talk to Arkiv a
 | `/datasets`, `/datasets/{key}` | Dataset marketplace, paid subscriptions, sample hex map | live, wallet sign-in |
 | `/explore` | Search samples by place on a map | live, wallet sign-in |
 | `/activity` | Transactions, payments and contributor rewards | live, wallet sign-in |
+| `/analytics` | Earnings per reward epoch (contributor), spend per month and dataset (lab), revenue split (admins) | live, wallet sign-in |
 | `/enroll` | Enroll glasses to a World ID and a payout wallet | live, wallet sign-in |
 | `/capture` | A device's captures with signature and content-hash checks | live, wallet sign-in |
 | `/admin` | List, grant and revoke admins | live, admin only |
@@ -182,7 +185,7 @@ A Next.js app and gateway in `web-monorepo/apps/web`. Live pages talk to Arkiv a
 | `/docs` | Protocol docs | static |
 | `/mockups` | Index of the demo screens below | demo |
 | `/mockups/datasets` | Validator-consensus hex map | demo |
-| `/mockups/analytics` | Contributor earnings and company spend | demo |
+| `/mockups/analytics` | The original static design of the analytics screen (fake figures and dollars) | demo |
 | `/mockups/devices` · `/mockups/enroll` | Registered devices and the enrollment flow | demo |
 
 | Wiring & firmware | Datasets (mockup) | Analytics (mockup) |
@@ -199,6 +202,27 @@ npm install
 npm run dev   # http://localhost:3000
 ```
 
+**Odi**, the round robot in the bottom-right corner, is the app's guide: its glowing eyes follow your pointer and a click opens quick links to the docs, datasets, enrollment, wiring and this repo. **Take the tour** in that panel has Odi walk a new visitor through the site, game-tutorial style: the landing page, the glasses, the demo screens under `/mockups`, wallet sign-in, and finally the docs, with a spotlight on each part and a speech bubble explaining it. It stays still when the system asks for reduced motion.
+
+### Lighthouse
+
+| Page | Performance | Accessibility | Best Practices | SEO |
+|---|---|---|---|---|
+| `/` | 100 | 100 | 100 | 100 |
+| `/datasets` | 98 | 100 | 100 | 100 |
+| `/explore` | 98 | 100 | 100 | 100 |
+| `/analytics` | 98 | 100 | 100 | 100 |
+| `/activity` | 98 | 100 | 100 | 100 |
+| `/docs` | 100 | 100 | 100 | 100 |
+| `/device` | 100 | 100 | 100 | 100 |
+| `/wiring` | 100 | 100 | 100 | 100 |
+
+Lighthouse 13.6, desktop preset, local production build (`next build && next start`), signed in, 6 Nov 2026. On the mobile preset the signed-in data pages score lower on Performance (about 77 to 79 on `/datasets` and `/activity`); the other categories stay at 100. To re-run one page:
+
+```bash
+npx lighthouse http://localhost:3000/datasets --preset=desktop --view
+```
+
 ## Directory structure
 
 ```
@@ -211,10 +235,13 @@ npm run dev   # http://localhost:3000
 ├── firmware/      ESP32 glasses: `odsy_glasses_camera` (camera capture, secp256k1 device key, signed upload) plus mic, IR, IMU and OLED sketches
 ├── contracts/     Foundry: OdsySubscriptions (subscriptions + reward claims) and ConsensusRegistry (tile verdicts, two-strike ban)
 ├── docs/          Screenshots used in this README, the provenance design note (odsy_provenance_network.md) and how enrollment and capture work (enrollment_and_capture.md)
+├── video/         Demo video plan: ETHGlobal rules, script, shot list, recording and export steps
 ├── .claude/       Agent skills (Solidity security, OpenZeppelin, token checks)
 ├── .cursor/       Cursor rules (Ponytail)
 ├── AGENTS.md      Rules for AI coding agents
-└── CLAUDE.md      Loads AGENTS.md for Claude Code
+├── CLAUDE.md      Loads AGENTS.md for Claude Code
+├── CONTRIBUTING.md How to set up, test and open a PR
+└── LICENSE        MIT
 ```
 
 ## Arkiv data layer (built)
@@ -362,10 +389,10 @@ Runs are incremental. The cursor is `$expiresAt`: new and extended samples alway
 | `GET /api/datasets` | Public | Datasets with sample counts and the viewer's access-until date |
 | `GET /api/admins`, `POST /api/admins`, `DELETE /api/admins?address=` | Admin | List admins (root and granted), make a wallet admin with `{address}`, or remove a granted one |
 | `POST /api/datasets`, `PATCH /api/datasets/{key}` | Admin | Create a dataset and list it on the contract, or list/unlist it with `{active}` |
-| `GET /api/subscriptions` | Signed in | Own payments from the contract's `Subscribed` events plus legacy Arkiv periods (admin: all) |
+| `GET /api/subscriptions` | Signed in | Own payments from the contract's `Subscribed` events (each with its block time, `paidAt`) plus legacy Arkiv periods (admin: all) |
 | `GET /api/rewards` | Signed in | The wallet's reward per epoch with its Merkle proof and claimed state |
 | `POST /api/keys` | Signed in | `{keys: [...]}` → per-sample decryption keys the wallet is entitled to |
-| `GET /api/activity` | Signed in | Recent Arkiv writes with tx hashes (admin: all, from the last ~7 days of logs; lab: own subscriptions) |
+| `GET /api/activity` | Signed in | Recent Arkiv writes with tx hashes (admin: all; lab: own subscriptions). Only the last ~800 blocks (about 25 minutes), because the Arkiv RPC serves logs only for recent blocks |
 | `POST /api/mcp/token` | Signed in | Mint a 7-day bearer token for the MCP server |
 | `POST /api/mcp` | `Bearer` MCP token | MCP server: `list_datasets`, `search_samples`, `get_sample` |
 | `GET /api/config` | Public | Subscriptions contract address and its chain |
@@ -388,7 +415,7 @@ Deploy the contract once:
 ```bash
 cd contracts
 git submodule update --init --recursive     # OpenZeppelin Contracts + forge-std
-forge test                                  # 14 tests, fuzzing included
+forge test                                  # 24 tests (14 subscriptions + 10 consensus), fuzzing included
 forge script script/DeploySubscriptions.s.sol --rpc-url galileo --broadcast --private-key $OG_PRIVATE_KEY
 # put the printed address in SUBSCRIPTIONS_ADDRESS, and the deploy block in SUBSCRIPTIONS_FROM_BLOCK
 ```
@@ -403,8 +430,8 @@ npm run dev                                 # gateway on http://localhost:3000
 npm run simulate -- 3                       # fake glasses: register, upload 3 signed samples from Bandra, query nearby
 npm run simulate -- 1 ./photo.jpg           # an image > 96 KiB goes through 0G
 npm run simulate -- 3 --kind sensor         # weather readings (kind=sensor, application/json)
-npm test                                    # geo, thinning, signature, encryption, session, reward-split tests (no network)
-npm run lab:ingest                          # with the LAB_* vars set: pull your datasets into apps/web/lab-data/
+npm test                                    # geo, thinning, signature, encryption, session, reward-split, MCP and analytics tests (no network)
+npm run lab:ingest                          # with the LAB_* vars set: pull your datasets into apps/web/lab-data/ (or LAB_OUT_DIR)
 npm run rewards:publish -- --dry-run        # preview the next reward epoch; drop --dry-run to publish it
 ```
 
@@ -421,6 +448,7 @@ node -e "import('viem/accounts').then(a=>{const k=a.generatePrivateKey();console
 - **The paywall covers payloads, not metadata.** Location, time, device, MAC and World ID are public on Arkiv by design, because they power the geo index. A subscriber who saves the keys or data keeps them after the subscription ends.
 - **The contract owner is trusted with rewards.** Payments and access are enforced on-chain. The reward split is computed off-chain, though, and the owner key publishes the roots. A wrong root can misdirect up to that epoch's total, but never the treasury or other epochs. There are no refunds. Only externally owned wallets can sign in, not smart-contract wallets.
 - **The contracts aren't audited.** They're tested (24 Foundry tests: 14 for subscriptions, including fuzz and reentrancy cases, and 10 for consensus). Run the repo's `solidity-auditor` skill and an external review before any real money.
+- **Analytics shows what the contracts record, in 0G.** There is no dollar price on a testnet, and no quality score or pass rate, because consensus verdicts do not drive payouts yet. Contributor totals only cover published reward epochs, and payments from before the contract have no timestamp, so they are left out of the charts.
 - **Mockups live under `/mockups`** and show demo data only: `/mockups/datasets` (the validator-consensus hex map), `/mockups/analytics`, `/mockups/devices` and `/mockups/enroll`. They are marked "mockup" in the nav and top bar. The live routes are `/datasets`, `/datasets/{key}`, `/explore`, `/activity`, `/enroll`, `/capture`, `/admin` and `/api/*`.
 - **Explorer links** assume `/tx/<hash>` paths on chainscan-galileo.0g.ai and rabdi.explorer.arkiv.network.
 - **Device keys are only as safe as the device.** Real glasses need the key in a secure element (ATECC608A) or ESP32 flash encryption. A key in plain NVS can be copied.
@@ -434,7 +462,7 @@ node -e "import('viem/accounts').then(a=>{const k=a.generatePrivateKey();console
 
 Subscribers can search and read the data they paid for from Claude, Cursor, ChatGPT's API or any other MCP client, with a bearer token. It is retrieval only: the model you connect does the answering, and it can only see what your wallet has subscribed to.
 
-**Get a token.** Sign in on the Datasets page, open the *Use your datasets in an AI tool* card and click **Create token**. It shows a ready-made client config. Tokens last 7 days and are shown once.
+**Get a token.** Sign in on the Datasets page, open the *Use your datasets in an AI tool* card and click **Create token**. It shows a copy-paste setup for Claude Code, Cursor, Claude Desktop and any other client. The server is hosted, so a new user installs and clones nothing: no local path, no runtime, only a token (Claude Desktop also needs Node.js for the bridge). Tokens last 7 days and are shown once.
 
 **Endpoint:** `POST /api/mcp` (MCP streamable HTTP, stateless, JSON replies), header `Authorization: Bearer <token>`.
 
@@ -451,12 +479,27 @@ Connect a client:
 claude mcp add --transport http odyssey https://<your-host>/api/mcp --header "Authorization: Bearer <token>"
 ```
 
+No `claude` command installed (for example inside the desktop app)? Use the project file instead. This repo already has a token-free [`.mcp.json`](.mcp.json): export your token, then start Claude Code in the repo and approve the server.
+
+```bash
+export ODYSSEY_TOKEN=<token>
+# optional: point at your own deployment instead of the default
+export ODYSSEY_URL=https://<your-host>
+```
+
 ```json
 // Cursor: .cursor/mcp.json
 { "mcpServers": { "odyssey": { "url": "https://<your-host>/api/mcp", "headers": { "Authorization": "Bearer <token>" } } } }
 ```
 
-- **Claude Desktop** (no custom headers in its connector UI): `npx mcp-remote https://<your-host>/api/mcp --header "Authorization: Bearer <token>"`.
+- **Claude Desktop** only launches local commands, so use the `mcp-remote` bridge (needs Node.js; `npx` fetches it). In `claude_desktop_config.json`:
+
+  ```json
+  { "mcpServers": { "odyssey": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://<your-host>/api/mcp", "--header", "Authorization:${ODYSSEY_AUTH}"],
+      "env": { "ODYSSEY_AUTH": "Bearer <token>" } } } }
+  ```
 - **ChatGPT and the OpenAI API:** the Responses API takes an MCP tool with `server_url` and `headers`. ChatGPT's own connector screen asks for OAuth, which this server does not offer yet.
 - **Anything else:** any MCP client that speaks HTTP and can set a header.
 
@@ -577,6 +620,18 @@ Buy datasets with a **provenance proof per sample**: the device that captured it
 ## For contributors
 
 Wear it, capture your world, get paid. Your data is encrypted, your identity stays private (World ID reveals nothing about who you are), and you can revoke it.
+
+## AI use
+
+We built this with AI coding assistants: Claude Code and Cursor wrote much of the web app, contracts, tests and docs, under the rules in [AGENTS.md](AGENTS.md) and [.cursor/rules](.cursor/rules). The team chose the design, reviewed and tested the changes, and ran the on-chain deployments and live tests. The Solidity audit and OpenZeppelin skills in `.claude/skills/` are third-party and keep their own licenses.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+[MIT](LICENSE). Third-party code keeps its own license: the git submodules under `contracts/lib/` (OpenZeppelin Contracts, forge-std) and each skill under `.claude/skills/` (see its `LICENSE` file).
 
 ---
 
