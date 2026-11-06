@@ -89,6 +89,8 @@ Slashing only happens on **objective evidence** (bad signature, duplicate, faile
 
 How the project maps to the sponsor tracks it targets. Each row says what is built, where it lives, and how to see it. Honest status is in the last column.
 
+For a walk through one track at a time, with diagrams and a demo path for each, see [docs/TRACKS.md](docs/TRACKS.md).
+
 ### Arkiv: the data layer
 
 | What we built | Where | Status |
