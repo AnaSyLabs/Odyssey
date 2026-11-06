@@ -11,6 +11,7 @@ const TOC = [
   ["pipeline", "The pipeline"],
   ["sample", "What a sample proves"],
   ["validation", "Validation"],
+  ["consensus", "Checking a neighbourhood"],
   ["stake", "Stake and slash"],
   ["rewards", "Rewards"],
   ["scale", "Why it scales"],
@@ -248,6 +249,44 @@ export default function Docs() {
             <li><b>Honeypots.</b> Known-answer samples are mixed in; validators who get them wrong lose reputation, then stake.</li>
             <li><b>Challenges.</b> Anyone can post a bond to challenge a batch during the window; a proven challenge slashes the gateway and pays the challenger.</li>
           </Ul>
+        </Section>
+
+        <Section id="consensus" title="Checking a neighbourhood">
+          <P>
+            The map is cut into hexagons. For each hexagon and each day, we check a small random handful of the clips, the way a
+            teacher spot-checks homework instead of reading every page.
+          </P>
+          <Ol>
+            <li>Too few clips or too few different devices in a hexagon? It waits. Nothing is decided yet.</li>
+            <li>Otherwise the contract works out how many clips to check, and checkers (validators) look at them.</li>
+            <li>Each validator says how many of the checked clips passed. The middle answer wins.</li>
+            <li>If at least two thirds passed, the hexagon is accepted and its contributors get paid. If not, it is rejected.</li>
+          </Ol>
+          <H3>Two strikes and you&apos;re out</H3>
+          <P>
+            If a device is caught with provable bad data twice (a faked signature, a copied clip, an impossible location), its
+            World ID is banned. Its data from the first strike onwards is left out, and it can&apos;t register another device. A
+            wrongly banned person can be un-banned by the admins. Being outvoted is never a strike.
+          </P>
+          <Table
+            head={["Setting", "Plain meaning", "Starting value"]}
+            rows={[
+              ["Hexagon size", "How big a neighbourhood is (set per dataset)", "about a street, res 8"],
+              ["Time bucket", "How long one check covers", "1 day"],
+              ["Minimum clips / devices", "Below this the hexagon waits", "20 clips, 3 devices"],
+              ["Check rate", "Share of clips that get checked", "3%, never below 1% or 3 clips"],
+              ["Pass mark", "Score a clip needs to count as good", "70 out of 100"],
+              ["Needed to pass", "Share of checked clips that must pass", "two thirds"],
+              ["Validators per hexagon", "Votes needed to finish", "5"],
+              ["Strikes", "Provable alerts before a ban", "2"],
+            ]}
+          />
+          <Note title="Where the numbers live">
+            <P>
+              The contract is <Mono>contracts/src/ConsensusRegistry.sol</Mono>. The shared settings are set once at deploy from{" "}
+              <Mono>contracts/.env.example</Mono>; each dataset picks its own hexagon size, check rate and pass mark within them.
+            </P>
+          </Note>
         </Section>
 
         <Section id="stake" title="Stake and slash">
