@@ -6,6 +6,8 @@ AI is running out of internet. The next frontier models, especially robots and e
 
 Odsy turns every pair of glasses, every sensor and every phone into a **paid, verifiable data source**, and gives AI labs a dataset they can actually trust: every sample is traceable to a real device, a real human and a real moment, and nobody can quietly change it afterwards.
 
+![Odyssey web app: landing page, datasets marketplace, wiring lessons and contributor analytics](docs/screenshots/mockup.png)
+
 ```
   capture ──► sign ──► filter ──► store ──► anchor ──► verify ──► pay
   (device)   (chip)    (TEE)      (0G)      (chain)    (stake)    (token)
@@ -83,6 +85,32 @@ Slashing only happens on **objective evidence** (bad signature, duplicate, faile
 | Next.js server + MongoDB on Vercel | Gateway and coordinator MVP |
 | Arkiv gateway + geohash index (`apps/web/app/api`) | Queryable, signed sample index; see below |
 
+## The web app
+
+A mock-data front end for the whole flow, built with Next.js in `web-monorepo/apps/web`. Subscriptions, earnings and device enrollment are simulated in the browser; there is no gateway or chain behind them yet.
+
+| Page | What it shows |
+|---|---|
+| `/` | Landing page with the interactive 3D glasses |
+| `/datasets` | Dataset marketplace, mock subscriptions, H3 hex consensus map of subscribed sources |
+| `/analytics` | Contributor earnings and company spend |
+| `/device` | 3D capture device: interactive, exploded, wireframe |
+| `/devices` · `/enroll` | Registered devices and the enrollment flow |
+| `/wiring` | ESP32 wiring and reference firmware, one lesson at a time |
+| `/docs` | Protocol docs |
+
+| Datasets | Wiring & firmware | Analytics |
+|---|---|---|
+| ![Datasets](docs/screenshots/datasets.png) | ![Wiring](docs/screenshots/wiring.png) | ![Analytics](docs/screenshots/analytics.png) |
+
+Run it:
+
+```bash
+cd web-monorepo
+npm install
+npm run dev   # http://localhost:3000
+```
+
 ## Directory structure
 
 ```
@@ -94,6 +122,7 @@ Slashing only happens on **objective evidence** (bad signature, duplicate, faile
 │                   scripts/simulate-device.ts (fake glasses), scripts/lab-ingest.ts (lab-side verified sync)
 ├── firmware/      ESP32 glasses: mic, IR camera, IMU, OLED, device signing
 ├── contracts/     Foundry: OdsySubscriptions (dataset subscriptions + contributor reward claims) on 0G Galileo
+├── docs/          Screenshots used in this README
 ├── .claude/       Agent skills (Solidity security, OpenZeppelin, token checks)
 ├── .cursor/       Cursor rules (Ponytail)
 ├── AGENTS.md      Rules for AI coding agents

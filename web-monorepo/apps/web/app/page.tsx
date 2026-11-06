@@ -60,6 +60,7 @@ export default function Landing() {
             {dark ? <LuSun size={18} /> : <LuMoon size={18} />}
           </button>
           <Link href="/docs" className="btn">Protocol</Link>
+          <Link href="/mockups" className="btn">Mockups</Link>
           <Link href="/datasets" className="btn primary">Browse datasets</Link>
         </nav>
       </header>

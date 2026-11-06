@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense } from "react";
-import { LuBookOpen, LuBox, LuChartNoAxesColumn, LuCircuitBoard, LuDatabase, LuGlasses, LuHexagon, LuMapPinned, LuMoon, LuPlugZap, LuReceipt, LuSun } from "react-icons/lu";
+import { LuBookOpen, LuBox, LuChartNoAxesColumn, LuCircuitBoard, LuDatabase, LuGlasses, LuHexagon, LuLayers, LuMapPinned, LuMoon, LuPlugZap, LuReceipt, LuSun } from "react-icons/lu";
 import Logo from "@/components/Logo";
 import SignInGate from "@/components/SignInGate";
 import { WalletButton, WalletProvider } from "@/components/wallet";
@@ -20,6 +20,7 @@ const NAV = [
   ["/mockups/analytics", "Mockup: analytics", LuChartNoAxesColumn],
   ["/mockups/devices", "Mockup: my devices", LuGlasses],
   ["/mockups/enroll", "Mockup: enroll device", LuPlugZap],
+  ["/mockups", "Mockups", LuLayers],
 ] as const;
 // Pages backed by the gateway; everything else (landing, docs, device, wiring, /mockups) stays open.
 const LIVE = ["/datasets", "/explore", "/activity"];
@@ -33,6 +34,9 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const dark = useDark();
   const here = NAV.find(([href]) => path === href || path.startsWith(`${href}/`));
+  // Mockup screens are reached through the single Mockups entry, not one icon each.
+  const rail = NAV.filter(([href]) => !href.startsWith("/mockups/"));
+  const active = path.startsWith("/mockups") ? "/mockups" : here?.[0];
 
   return (
     <WalletProvider>
@@ -42,9 +46,9 @@ function AppShell({ children }: { children: React.ReactNode }) {
           <Logo size={18} />
         </Link>
         <nav className="mt-10 flex flex-col gap-4">
-          {NAV.map(([href, label, Icon]) => (
-            <Link key={href} href={href} aria-label={label} title={label} aria-current={here?.[0] === href ? "page" : undefined}
-              className={`grid size-10 place-items-center rounded-full bg-[var(--st-3)] transition-colors ${here?.[0] === href ? "text-[var(--st-on)] ring-1 ring-[var(--st-cyan)] ring-offset-2 ring-offset-[var(--st-0)]" : "text-[var(--st-on-var)] hover:text-[var(--st-on)]"}`}>
+          {rail.map(([href, label, Icon]) => (
+            <Link key={href} href={href} aria-label={label} title={label} aria-current={active === href ? "page" : undefined}
+              className={`grid size-10 place-items-center rounded-full bg-[var(--st-3)] transition-colors ${active === href ? "text-[var(--st-on)] ring-1 ring-[var(--st-cyan)] ring-offset-2 ring-offset-[var(--st-0)]" : "text-[var(--st-on-var)] hover:text-[var(--st-on)]"}`}>
               <Icon size={18} />
             </Link>
           ))}
@@ -68,7 +72,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
             </span>
           )}
           <nav className="flex min-w-0 gap-3 overflow-x-auto text-xs text-[var(--st-on-var)] lg:hidden" aria-label="App">
-            {NAV.map(([href, label]) => <Link key={href} href={href} className="shrink-0 hover:text-[var(--st-on)]">{label.startsWith("Mockup: ") ? `${label.slice(8).split(" ").at(-1)} (mock)` : label.split(" ")[0]}</Link>)}
+            {rail.map(([href, label]) => <Link key={href} href={href} className="shrink-0 hover:text-[var(--st-on)]">{label.split(" ")[0]}</Link>)}
           </nav>
           <div className="ml-auto flex items-center gap-2">
             <WalletButton />
