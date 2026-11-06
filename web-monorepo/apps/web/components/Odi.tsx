@@ -10,12 +10,12 @@ const LINKS = [
   ["https://github.com/AnaSyLabs/Odyssey", "Code on GitHub"],
 ] as const;
 
-/** Odi, the Odyssey guide: a pair of capture glasses docked bottom-right whose eyes follow the pointer. */
+/** Odi, the Odyssey guide: a little camera bot docked bottom-right whose lens eye follows the pointer. */
 export default function Odi() {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
 
-  // Eyes follow the pointer: write CSS vars straight to the DOM so moving the mouse never re-renders.
+  // The iris follows the pointer (up to 8 units, the gap inside the lens ring): write CSS vars straight to the DOM so moving the mouse never re-renders.
   useEffect(() => {
     const el = root.current;
     if (!el || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -26,8 +26,8 @@ export default function Odi() {
         const r = el.getBoundingClientRect();
         const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
         const d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / 300);
-        el.style.setProperty("--odi-x", `${((dx / d) * 4.5 * k).toFixed(2)}px`);
-        el.style.setProperty("--odi-y", `${((dy / d) * 4.5 * k).toFixed(2)}px`);
+        el.style.setProperty("--odi-x", `${((dx / d) * 8 * k).toFixed(2)}px`);
+        el.style.setProperty("--odi-y", `${((dy / d) * 8 * k).toFixed(2)}px`);
       });
     };
     addEventListener("pointermove", move);
@@ -60,29 +60,26 @@ export default function Odi() {
         </nav>
       )}
       <button type="button" className="odi-btn" aria-label="Odi, the Odyssey guide: open quick links" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-        <svg viewBox="0 0 120 84" aria-hidden focusable="false">
+        <svg viewBox="0 0 120 108" aria-hidden focusable="false">
           <g className="odi-body">
-            {/* temples */}
-            <path d="M8 34 2 28M112 34l6-6" stroke="#c5f467" strokeWidth="5" strokeLinecap="round" />
-            {/* frame: two lenses and the bridge */}
-            <circle cx="34" cy="40" r="25" fill="#0f1a10" stroke="#c5f467" strokeWidth="6" />
-            <circle cx="86" cy="40" r="25" fill="#0f1a10" stroke="#c5f467" strokeWidth="6" />
-            <path d="M56 34q4-5 8 0" fill="none" stroke="#c5f467" strokeWidth="6" strokeLinecap="round" />
-            {/* lens glare */}
-            <path d="M20 30a16 16 0 0 1 10-9M72 30a16 16 0 0 1 10-9" fill="none" stroke="#fff" strokeOpacity=".25" strokeWidth="3" strokeLinecap="round" />
-            {/* eyes */}
+            {/* antenna with the capture LED */}
+            <line x1="60" y1="20" x2="60" y2="9" stroke="#c5f467" strokeWidth="4" strokeLinecap="round" />
+            <circle className="odi-led" cx="60" cy="7" r="5" fill="#ff4d4d" />
+            {/* ears, head and face plate */}
+            <rect x="8" y="48" width="10" height="22" rx="5" fill="#8fbf3a" />
+            <rect x="102" y="48" width="10" height="22" rx="5" fill="#8fbf3a" />
+            <rect x="16" y="20" width="88" height="80" rx="26" fill="#c5f467" />
+            <rect x="24" y="28" width="72" height="56" rx="20" fill="#1a1f14" />
+            <path d="M31 37a14 14 0 0 1 10-6" fill="none" stroke="#fff" strokeOpacity=".3" strokeWidth="3" strokeLinecap="round" />
+            {/* the lens eye: ring stays put, the iris follows the pointer */}
             <g className="odi-eyes">
-              <circle cx="34" cy="42" r="10" fill="#f4f4f4" />
-              <circle cx="86" cy="42" r="10" fill="#f4f4f4" />
-              <g className="odi-pupils" fill="#0b0b0b">
-                <circle cx="34" cy="42" r="5" />
-                <circle cx="86" cy="42" r="5" />
+              <circle cx="60" cy="56" r="20" fill="#2b3320" stroke="#c5f467" strokeWidth="3" />
+              <g className="odi-pupils">
+                <circle cx="60" cy="56" r="12" fill="#0b0b0b" />
+                <circle cx="64" cy="52" r="4" fill="#fff" />
               </g>
             </g>
-            {/* smile under the bridge */}
-            <path d="M53 66q7 6 14 0" fill="none" stroke="#c5f467" strokeWidth="4" strokeLinecap="round" />
-            {/* capture LED */}
-            <circle className="odi-led" cx="12" cy="20" r="4" fill="#ff4d4d" />
+            <path d="M50 92q10 5 20 0" fill="none" stroke="#1a1f14" strokeWidth="4" strokeLinecap="round" />
           </g>
         </svg>
       </button>
