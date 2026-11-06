@@ -163,6 +163,24 @@ With `npm run dev` running, open each and check it loads without errors:
 - [ ] `/datasets`, `/explore`, `/activity` show the sign-in overlay until a wallet signs in
 - [ ] `/device`, `/wiring`, `/docs` open without sign-in; `/docs` links the deployed contract
 
+## 5. MCP server
+
+With `npm run dev` running and a wallet signed in:
+
+```bash
+# mint a token from a signed-in browser session cookie, or use the Create token button on /datasets
+T=<token>
+curl -s -X POST localhost:3000/api/mcp -H "authorization: Bearer $T" -H 'content-type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+curl -s -X POST localhost:3000/api/mcp -H "authorization: Bearer $T" -H 'content-type: application/json' \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"search_samples","arguments":{"dataset":"<dataset key>","query":"note"}}}'
+```
+
+- [ ] no token, or a session cookie used as a token, returns `401`
+- [ ] `tools/list` shows `list_datasets`, `search_samples`, `get_sample`
+- [ ] a subscribed lab finds its text samples; a wallet without a subscription gets "no active subscription for that dataset"
+- [ ] `get_sample` returns the decrypted text; a banned World ID's later samples are refused
+- [ ] connect Claude Code (`claude mcp add --transport http ...`) and ask it to list your datasets
+
 ## Troubleshooting
 
 | Symptom | Cause and fix |

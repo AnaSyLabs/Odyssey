@@ -327,6 +327,8 @@ Runs are incremental. The cursor is `$expiresAt`: new and extended samples alway
 | `GET /api/rewards` | Signed in | The wallet's reward per epoch with its Merkle proof and claimed state |
 | `POST /api/keys` | Signed in | `{keys: [...]}` → per-sample decryption keys the wallet is entitled to |
 | `GET /api/activity` | Signed in | Recent Arkiv writes with tx hashes (admin: all, from the last ~7 days of logs; lab: own subscriptions) |
+| `POST /api/mcp/token` | Signed in | Mint a 7-day bearer token for the MCP server |
+| `POST /api/mcp` | `Bearer` MCP token | MCP server: `list_datasets`, `search_samples`, `get_sample` |
 | `GET /api/config` | Public | Subscriptions contract address and its chain |
 | `GET /api/cron/extend` | `Bearer CRON_SECRET` | Retention job above |
 
@@ -388,6 +390,40 @@ node -e "import('viem/accounts').then(a=>{const k=a.generatePrivateKey();console
 - **Privacy.** MAC addresses and World ID nullifiers are public on Arkiv. Images can show bystanders. Before real users: hash or drop the MAC and blur faces at the gateway. Immutable personal data also conflicts with GDPR and DPDP deletion rights. Per-sample keys make crypto-shredding possible, by destroying `DATA_KEY`, but only for all samples at once.
 - **Live-tested so far:** device registration, plaintext and encrypted ingest (text and sensor samples), geo queries, wallet sign-in, dataset creation and the lab ingest job's sign-in and dataset lookup, all against Arkiv Rabdi. Not yet confirmed end to end on live networks: a paid subscription unlocking decryption, lab ingest writing decrypted files, payloads over 96 KiB on 0G, the Transactions log, the retention job, and the subscriptions contract on Galileo (deploy, subscribe, publish and claim rewards).
 - **Scale shortcuts** are marked `shortcut:` in code. The geo scan stops at 2,000 candidates. Duplicate and registration checks can race. The extend job runs in a single request.
+
+## MCP server: query your datasets from an LLM
+
+Subscribers can search and read the data they paid for from Claude, Cursor, ChatGPT's API or any other MCP client, with a bearer token. It is retrieval only: the model you connect does the answering, and it can only see what your wallet has subscribed to.
+
+**Get a token.** Sign in on the Datasets page, open the *Use your datasets in an AI tool* card and click **Create token**. It shows a ready-made client config. Tokens last 7 days and are shown once.
+
+**Endpoint:** `POST /api/mcp` (MCP streamable HTTP, stateless, JSON replies), header `Authorization: Bearer <token>`.
+
+| Tool | Does |
+|---|---|
+| `list_datasets` | Your active subscriptions: key, name, area, access end |
+| `search_samples` | Keyword search (BM25) over the text and sensor samples of one dataset, with optional time range. Returns the best matches with a snippet, location, time and content hash |
+| `get_sample` | One sample in full, decrypted, if a subscription covers it |
+
+Connect a client:
+
+```bash
+# Claude Code
+claude mcp add --transport http odyssey https://<your-host>/api/mcp --header "Authorization: Bearer <token>"
+```
+
+```json
+// Cursor: .cursor/mcp.json
+{ "mcpServers": { "odyssey": { "url": "https://<your-host>/api/mcp", "headers": { "Authorization": "Bearer <token>" } } } }
+```
+
+- **Claude Desktop** (no custom headers in its connector UI): `npx mcp-remote https://<your-host>/api/mcp --header "Authorization: Bearer <token>"`.
+- **ChatGPT and the OpenAI API:** the Responses API takes an MCP tool with `server_url` and `headers`. ChatGPT's own connector screen asks for OAuth, which this server does not offer yet.
+- **Anything else:** any MCP client that speaks HTTP and can set a header.
+
+Access is the same check as the web app (`readAccess`): the wallet's active subscriptions, a banned World ID's data excluded, admins see everything. Code: `lib/mcp-core.ts` (tokens, ranking, JSON-RPC), `lib/mcp.ts` (tools), `app/api/mcp`.
+
+**Limits.** Keyword search only, no embeddings, so "car" will not find "vehicle". It ranks the newest 100 text and sensor samples of a dataset per query. Images, audio and video, and payloads stored on 0G, are not returned. Tokens cannot be revoked, only expire (rotating `SESSION_SECRET` kills them all). No rate limiting yet, and no OAuth.
 
 ## Consensus contract
 
