@@ -200,7 +200,7 @@ npm install
 npm run dev   # http://localhost:3000
 ```
 
-**Odi**, the round robot in the bottom-right corner, is the app's guide: its glowing eyes follow your pointer and a click opens quick links to the docs, datasets, enrollment, wiring and this repo. It stays still when the system asks for reduced motion.
+**Odi**, the round robot in the bottom-right corner, is the app's guide: its glowing eyes follow your pointer and a click opens quick links to the docs, datasets, enrollment, wiring and this repo. **Take the tour** in that panel has Odi walk a new visitor through the site, game-tutorial style: the landing page, the glasses, the demo screens under `/mockups`, wallet sign-in, and finally the docs, with a spotlight on each part and a speech bubble explaining it. It stays still when the system asks for reduced motion.
 
 ### Lighthouse
 
