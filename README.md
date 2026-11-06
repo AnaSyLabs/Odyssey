@@ -216,6 +216,7 @@ npm run dev   # http://localhost:3000
 ├── .cursor/       Cursor rules (Ponytail)
 ├── AGENTS.md      Rules for AI coding agents
 ├── CLAUDE.md      Loads AGENTS.md for Claude Code
+├── CONTRIBUTING.md How to set up, test and open a PR
 └── LICENSE        MIT
 ```
 
@@ -599,6 +600,10 @@ Wear it, capture your world, get paid. Your data is encrypted, your identity sta
 ## AI use
 
 We built this with AI coding assistants: Claude Code and Cursor wrote much of the web app, contracts, tests and docs, under the rules in [AGENTS.md](AGENTS.md) and [.cursor/rules](.cursor/rules). The team chose the design, reviewed and tested the changes, and ran the on-chain deployments and live tests. The Solidity audit and OpenZeppelin skills in `.claude/skills/` are third-party and keep their own licenses.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
