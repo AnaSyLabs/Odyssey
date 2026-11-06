@@ -9,7 +9,7 @@ type Testimonial = Fields & { id: string; src?: string; updatedAt: number };
 
 // Built in, so they come back after every deploy; images live in public/testimonials.
 const SEED = [
-  { id: "bertrand-juglas", name: "Bertrand Juglas", role: "Mentor, VantagePeers", quote: "", src: "/testimonials/bertrand-juglas.jpg" },
+  { id: "bertrand-juglas", name: "Bertrand Juglas", role: "Mentor, VantagePeers", quote: "Thanks for this impressive demonstration 👏", src: "/testimonials/bertrand-juglas.jpg" },
 ];
 
 // shortcut: in-memory, so adds and edits vanish on every redeploy or cold start and each Vercel instance has its own list; move to Arkiv or a database before relying on them.
