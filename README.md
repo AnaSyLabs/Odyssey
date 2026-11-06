@@ -87,21 +87,27 @@ Slashing only happens on **objective evidence** (bad signature, duplicate, faile
 
 ## The web app
 
-A mock-data front end for the whole flow, built with Next.js in `web-monorepo/apps/web`. Subscriptions, earnings and device enrollment are simulated in the browser; there is no gateway or chain behind them yet.
+A Next.js app and gateway in `web-monorepo/apps/web`. Live pages talk to Arkiv and 0G Galileo and ask for a wallet sign-in. Everything under `/mockups` runs on demo data and needs no sign-in.
 
-| Page | What it shows |
-|---|---|
-| `/` | Landing page with the interactive 3D glasses |
-| `/datasets` | Dataset marketplace, mock subscriptions, H3 hex consensus map of subscribed sources |
-| `/analytics` | Contributor earnings and company spend |
-| `/device` | 3D capture device: interactive, exploded, wireframe |
-| `/devices` · `/enroll` | Registered devices and the enrollment flow |
-| `/wiring` | ESP32 wiring and reference firmware, one lesson at a time |
-| `/docs` | Protocol docs |
-
-| Datasets | Wiring & firmware | Analytics |
+| Route | What it shows | Data |
 |---|---|---|
-| ![Datasets](docs/screenshots/datasets.png) | ![Wiring](docs/screenshots/wiring.png) | ![Analytics](docs/screenshots/analytics.png) |
+| `/` | Landing page with the interactive 3D glasses | static |
+| `/datasets`, `/datasets/{key}` | Dataset marketplace, paid subscriptions, sample hex map | live, wallet sign-in |
+| `/explore` | Search samples by place on a map | live, wallet sign-in |
+| `/activity` | Transactions, payments and contributor rewards | live, wallet sign-in |
+| `/device` | 3D capture device: interactive, exploded, wireframe | static |
+| `/wiring` | ESP32 wiring and reference firmware, one lesson at a time | static |
+| `/docs` | Protocol docs | static |
+| `/mockups` | Index of the demo screens below | demo |
+| `/mockups/datasets` | Validator-consensus hex map | demo |
+| `/mockups/analytics` | Contributor earnings and company spend | demo |
+| `/mockups/devices` · `/mockups/enroll` | Registered devices and the enrollment flow | demo |
+
+| Wiring & firmware | Datasets (mockup) | Analytics (mockup) |
+|---|---|---|
+| ![Wiring](docs/screenshots/wiring.png) | ![Datasets mockup](docs/screenshots/datasets.png) | ![Analytics mockup](docs/screenshots/analytics.png) |
+
+The datasets and analytics screenshots predate the live pages and show the demo screens, now under `/mockups`.
 
 Run it:
 
@@ -264,7 +270,7 @@ Runs are incremental. The cursor is `$expiresAt`: new and extended samples alway
 |---|---|---|
 | `POST /api/devices` | `Bearer REGISTRAR_TOKEN` | Binds `{device, worldId, deviceType, mac, payout?}`. Called by the World ID registration page after it verifies the proof |
 | `PATCH /api/devices` | `Bearer REGISTRAR_TOKEN` | `{device, payout}`: set the wallet that receives a device's rewards |
-| `POST /api/ingest` | Device signature | `{kind, mime, capturedAt, lat, lon, sensors, data (base64), signature}` → `201 {entityKey, txHash, contentHash, storage, ogRoot}` |
+| `POST /api/ingest` | Device signature | `{kind, mime, capturedAt, lat, lon, sensors, data (base64), signature}` → `201 {entityKey, txHash, contentHash, storage, ogRoot}`. `403` for an unregistered or banned device |
 | `GET /api/samples?lat=&lon=&radius=&kind=&deviceType=&from=&to=&limit=` or `?dataset=` | Public (metadata) | Samples within `radius` metres (max 50 km) or in a dataset, nearest first. `readable` says whether the viewer can decrypt |
 | `GET /api/samples/{key}` | Public, more with access | Metadata and the re-checked signature. With access, also the decrypted sensors and inline payload, and `verified.contentHash` |
 | `GET /api/samples/{key}/data` | Access | Decrypted payload as a file (inline or from 0G), hash-checked |
@@ -288,7 +294,7 @@ You need:
 - **A 0G testnet wallet with tokens** ([faucet.0g.ai](https://faucet.0g.ai)) as `OG_PRIVATE_KEY`. It deploys and owns the subscriptions contract, and stores payloads over 96 KiB.
 - **Foundry** for the contract: `curl -L https://foundry.paradigm.xyz | bash && foundryup`.
 - **A browser wallet** (MetaMask or similar) with some Galileo test 0G, to sign in and pay. The app adds the Galileo network for you.
-- **New secrets in `.env`:** `DATA_KEY` (`openssl rand -hex 32`, back it up), `SESSION_SECRET` (`openssl rand -hex 32`), `ADMIN_ADDRESSES` (your wallet address), and `SUBSCRIPTIONS_ADDRESS` plus `SUBSCRIPTIONS_FROM_BLOCK` from the deploy below.
+- **New secrets in `.env`:** `DATA_KEY` (`openssl rand -hex 32`, back it up), `SESSION_SECRET` (`openssl rand -hex 32`), `ADMIN_ADDRESSES` (your wallet address), and `SUBSCRIPTIONS_ADDRESS` plus `SUBSCRIPTIONS_FROM_BLOCK` from the deploy below, and optionally `CONSENSUS_ADDRESS` (see *Consensus contract*).
 
 Deploy the contract once:
 
@@ -327,7 +333,7 @@ node -e "import('viem/accounts').then(a=>{const k=a.generatePrivateKey();console
 - **The gateway is trusted.** It holds the key that writes everything and `DATA_KEY`, which decrypts everything. Anyone can re-check a sample's device signature, but a compromised gateway could refuse uploads, delete samples or leak data.
 - **The paywall covers payloads, not metadata.** Location, time, device, MAC and World ID are public on Arkiv by design, because they power the geo index. A subscriber who saves the keys or data keeps them after the subscription ends.
 - **The contract owner is trusted with rewards.** Payments and access are enforced on-chain. The reward split is computed off-chain, though, and the owner key publishes the roots. A wrong root can misdirect up to that epoch's total, but never the treasury or other epochs. There are no refunds. Only externally owned wallets can sign in, not smart-contract wallets.
-- **The contract isn't audited.** It's tested (14 Foundry tests, including fuzz and reentrancy cases). Run the repo's `solidity-auditor` skill and an external review before any real money.
+- **The contracts aren't audited.** They're tested (24 Foundry tests: 14 for subscriptions, including fuzz and reentrancy cases, and 10 for consensus). Run the repo's `solidity-auditor` skill and an external review before any real money.
 - **Mockups live under `/mockups`** and show demo data only: `/mockups/datasets` (the validator-consensus hex map), `/mockups/analytics`, `/mockups/devices` and `/mockups/enroll`. They are marked "mockup" in the nav and top bar. The live routes are `/datasets`, `/datasets/{key}`, `/explore`, `/activity` and `/api/*`.
 - **Explorer links** assume `/tx/<hash>` paths on chainscan-galileo.0g.ai and rabdi.explorer.arkiv.network.
 - **Device keys are only as safe as the device.** Real glasses need the key in a secure element (ATECC608A) or ESP32 flash encryption. A key in plain NVS can be copied.
@@ -341,19 +347,49 @@ node -e "import('viem/accounts').then(a=>{const k=a.generatePrivateKey();console
 
 `contracts/src/ConsensusRegistry.sol` decides whether a neighbourhood of data is good, and bans bad actors.
 
-**In plain words.** The map is cut into hexagons. For each hexagon and each day (a *tile*) we spot-check a few random clips, like a teacher checking a few pages of homework.
+### Deployed (0G Galileo testnet)
+
+| | |
+|---|---|
+| Contract | [`0x83bea227e5D2C72f8F0F73E63175759D4E6055DC`](https://chainscan-galileo.0g.ai/address/0x83bea227e5D2C72f8F0F73E63175759D4E6055DC) |
+| Network | 0G Galileo Testnet, chain ID 16602 |
+| Deploy tx | [`0x032d…2e34`](https://chainscan-galileo.0g.ai/tx/0x032d1d358c84b4563dc39516c776d7198f0046f3b588ff7ed9db33490be12e34), block 64,080,632 |
+| Rules fixed at deploy | quorum 6667 (two thirds), committee 3, min sample rate 100 (1%), min checks 3, strike limit 2 |
+| Admin / operator | `0x51f18a28F4C17121770782aC95B9baAf6257053a` (one testnet wallet; use a multisig for admin before real money) |
+
+This is a testnet deployment, unaudited, with throwaway validators, and the source is not verified on the explorer. Redeploy before using it for anything real, because the rules cannot change in place.
+
+### In plain words
+
+The map is cut into hexagons. For each hexagon and each day (a *tile*) we spot-check a few random clips, like a teacher checking a few pages of homework.
 
 1. Too few clips or devices in the hexagon? It waits.
 2. Otherwise validators check a handful of clips and each says how many passed. The middle answer wins.
 3. If two thirds passed, the tile is accepted and contributors get paid. If not, it is rejected.
 4. **Two strikes:** a device caught with *provable* bad data twice (fake signature, copied clip, failed honeypot, impossible location) gets its World ID banned. Its data from the first strike onward is left out. Being outvoted is never a strike. Admins can lift a ban.
 
-**Settings.** Shared rules are fixed at deploy from env vars (copy `contracts/.env.example` to `contracts/.env`). Each dataset picks its own within them.
+### How the gateway uses it
+
+The gateway reads and writes the contract with the same 0G wallet as the subscriptions contract (`OG_PRIVATE_KEY`, the operator). Set `CONSENSUS_ADDRESS` in `web-monorepo/apps/web/.env`; if it is unset nobody is ever banned. Code: `web-monorepo/apps/web/lib/consensus.ts`.
+
+| Where | What happens for a banned World ID |
+|---|---|
+| `POST /api/ingest` | `403`: no new uploads |
+| `POST /api/devices` | `403`: cannot register a new device |
+| Sample reads, `/api/samples/{key}/data`, `POST /api/keys` | Samples captured from its first strike on are not decryptable, even with a subscription. Admins still see everything |
+| `GET /api/cron/extend` | Its samples are not extended, so they expire |
+| Strike source today | One: a clip whose hash another World ID already uploaded (`replay`). The same device retrying is not a strike |
+
+Bans are cached for 60 seconds per server instance. Validators, tile submission and voting are not driven by the app yet: use `cast` (see below).
+
+### Settings
+
+Shared rules are fixed at deploy from env vars (copy `contracts/.env.example` to `contracts/.env`). Each dataset picks its own within them.
 
 | Env var | Plain meaning | Default |
 |---|---|---|
 | `QUORUM_BPS` | Share of checked clips that must pass (6667 = two thirds) | 6667 |
-| `COMMITTEE_SIZE` | Validator votes needed per tile | 5 |
+| `COMMITTEE_SIZE` | Validator votes needed per tile | 5 (3 on the testnet deploy) |
 | `MIN_SAMPLE_RATE_BPS` | Lowest spot-check rate a dataset may choose (100 = 1%) | 100 |
 | `MIN_CHECKS` | Every tile gets at least this many checks | 3 |
 | `STRIKE_LIMIT` | Alerts before a ban | 2 |
@@ -361,14 +397,42 @@ node -e "import('viem/accounts').then(a=>{const k=a.generatePrivateKey();console
 
 Per dataset (`createDataset`): hex size (H3 res 6 to 10), time bucket, minimum clips and devices, check rate, pass mark.
 
+### Deploy your own
+
 ```bash
 cd contracts
 git submodule update --init --recursive
-forge test
-forge script script/Deploy.s.sol --rpc-url $RPC_URL --private-key $DEPLOYER_KEY --broadcast
+forge test                                   # 24 tests: 14 subscriptions + 10 consensus
+cp .env.example .env                         # set ADMIN and OPERATOR (and COMMITTEE_SIZE)
+forge script script/Deploy.s.sol --rpc-url galileo --private-key $OG_PRIVATE_KEY            # dry run
+forge script script/Deploy.s.sol --rpc-url galileo --private-key $OG_PRIVATE_KEY --broadcast
 ```
 
-Limits of this first version: validators are an allowlist with one vote each (no staking, commit-reveal or challenges yet), rules can't change without redeploying, and the gateway does not call the contract yet. It has not been audited.
+Then put the printed address in `CONSENSUS_ADDRESS`.
+
+### Try it by hand
+
+```bash
+A=<contract address>; R="--rpc-url galileo --private-key $OG_PRIVATE_KEY"
+# add a validator (the validator needs a little 0G for gas)
+cast send $A "grantRole(bytes32,address)" $(cast keccak VALIDATOR) <validator> $R
+# create a dataset: hex res 8, 1-day tiles, min 20 clips and 3 devices, 3% checked, pass mark 70
+cast send $A "createDataset(bytes32,(uint8,uint32,uint32,uint32,uint16,uint8,bool))" <dataset key> "(8,86400,20,3,300,70,false)" $R
+# submit a tile (cell, epoch, root, clips, devices), then each validator votes how many checked clips passed
+cast send $A "submitTile(bytes32,uint64,uint64,bytes32,uint32,uint32)" <dataset key> 1 20000 0x…01 400 5 $R
+cast send $A "vote(bytes32,uint32)" <tile id> 10 --rpc-url galileo --private-key <validator key>
+# two alerts ban a World ID, then check
+cast send $A "raiseAlert(bytes32,bytes32,bytes32)" <worldId> $(cast format-bytes32-string replay) <ref> $R
+cast call $A "isBanned(bytes32)(bool)" <worldId> --rpc-url galileo
+```
+
+### How it was tested
+
+Ten Foundry tests, plus a run on the live deployment: three validators voted 10 of 12 checked clips as passed on a 400-clip tile and it ended Accepted, two alerts banned a test World ID, and `lift` cleared it. The gateway wiring is type-checked and builds but is not yet exercised end to end.
+
+### Limits of this first version
+
+Validators are an allowlist with one vote each (no staking, commit-reveal or challenges yet). Rules cannot change without redeploying. Only the `replay` strike is raised automatically; honeypot failures and validator outcomes are not connected. The contract is not audited.
 
 ## Roadmap
 
@@ -378,6 +442,8 @@ Limits of this first version: validators are an allowlist with one vote each (no
   - [x] Subscription contract with a 70 % contributor split and Merkle reward claims
   - [ ] Batch Merkle roots on a long-lived chain, real glasses with GPS
 - [ ] **Phase 2: Stake it.** Permissioned staked validators, honeypots, challenge window, slashing.
+  - [x] `ConsensusRegistry` on Galileo: tile verdicts by validator median, two-strike World ID ban, enforced by the gateway
+  - [ ] Validator staking and slashing, commit-reveal, honeypots, challenge window, more automatic strike sources
 - [ ] **Phase 3: Open it.** Permissionless validators, TEE gateways, rarity rewards, buyer marketplace with licensing.
 - [ ] **Phase 4: Value it.** Reward data by how much it actually improves a model.
 
