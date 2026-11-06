@@ -2,6 +2,7 @@ import { ExpirationTime } from "@arkiv-network/sdk";
 import { eq } from "@arkiv-network/sdk/query";
 import { addr } from "@arkiv-network/sdk/schema";
 import { getAddress, isAddress } from "viem";
+import { isBanned } from "@/lib/consensus";
 import { arkivPublic, arkivWallet, Devices, findDevice, gatewayAddress, hasBearer } from "@/lib/arkiv";
 
 const fail = (status: number, error: string) => Response.json({ error }, { status });
@@ -22,6 +23,7 @@ export async function POST(req: Request) {
 
   const device = getAddress(b.device);
   const worldId: string = b.worldId.toLowerCase();
+  if (await isBanned(worldId)) return fail(403, "this World ID is banned");
   if (await findDevice(device)) return fail(409, "device already registered");
   // One human, one device (README: Sybil resistance).
   const { entities } = await arkivPublic()

@@ -15,7 +15,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ key: st
 
   const enc = s.enc?.value;
   const contentHash = s.contentHash.value;
-  const readable = !enc || (await readAccess(await getSession()))(s);
+  const readable = !enc || await (await readAccess(await getSession()))(s);
   const sensors = readable ? open(hexBytes(s.sensors.value), enc, contentHash).toString("utf8") : undefined;
   const sensorsHash = s.sensorsHash?.value ?? sha256(sensors!); // legacy plaintext samples carry the sensors themselves
   const u = { kind: s.kind.value as Kind, mime: s.mime.value, capturedAt: Number(s.capturedAt.value), lat: s.lat.value, lon: s.lon.value };

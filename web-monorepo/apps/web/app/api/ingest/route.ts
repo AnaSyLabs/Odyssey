@@ -3,6 +3,7 @@ import { eq } from "@arkiv-network/sdk/query";
 import { addr, dec, u64 } from "@arkiv-network/sdk/schema";
 import { isHex, recoverMessageAddress } from "viem";
 import { keyFor } from "@/lib/access";
+import { raiseAlert, isBanned } from "@/lib/consensus";
 import { arkivPublic, arkivWallet, findDevice, gatewayAddress, Samples } from "@/lib/arkiv";
 import { ENC, encrypt } from "@/lib/crypto";
 import { geohash } from "@/lib/geo";
@@ -46,11 +47,14 @@ export async function POST(req: Request) {
   if (!device) return fail(400, "bad signature");
   const reg = await findDevice(device);
   if (!reg) return fail(403, `device ${device} is not registered`);
+  if (await isBanned(reg.worldId.value)) return fail(403, "this World ID is banned");
 
   const gateway = gatewayAddress();
   const dup = await arkivPublic()
-    .select({ $key: true }).from(Samples).where(eq("contentHash", contentHash)).ownedBy(gateway).limit(1).fetch();
+    .select({ $key: true, worldId: true }).from(Samples).where(eq("contentHash", contentHash)).ownedBy(gateway).limit(1).fetch();
   // shortcut: two identical uploads in the same block can both pass; add a lock if devices retry aggressively.
+  // A clip another human already uploaded is a replay: provable, so a strike. The same device retrying is not.
+  if (dup.entities.length && dup.entities[0].worldId.value !== reg.worldId.value) await raiseAlert(reg.worldId.value, "replay", contentHash);
   if (dup.entities.length) return Response.json({ error: "duplicate", entityKey: dup.entities[0].$key }, { status: 409 });
 
   // Encrypted before it leaves the gateway; subscribers get the per-sample key from /api/keys.

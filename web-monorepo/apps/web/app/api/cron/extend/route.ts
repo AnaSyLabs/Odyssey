@@ -2,6 +2,7 @@ import { ExpirationTime } from "@arkiv-network/sdk";
 import { and, asc, between, eq, gt, lt, startsWith } from "@arkiv-network/sdk/query";
 import { addr, key, u64 } from "@arkiv-network/sdk/schema";
 import type { Hex } from "viem";
+import { bannedFrom } from "@/lib/consensus";
 import { arkivPublic, arkivWallet, Devices, gatewayAddress, hasBearer, Samples } from "@/lib/arkiv";
 import { Datasets, Rewards } from "@/lib/schema";
 import { groupOf, thinGroup } from "@/lib/retention";
@@ -37,7 +38,7 @@ export async function GET(req: Request) {
   const soon = u64(currentBlock + BigInt(Math.ceil((WITHIN_DAYS * 86_400) / BLOCK_SECONDS)));
 
   const expiring = await scan((after) =>
-    pub.select({ $key: true, device: true, geohash: true, capturedAt: true })
+    pub.select({ $key: true, device: true, worldId: true, geohash: true, capturedAt: true })
       .from(Samples, { onMismatch: "throw" }).where(and(lt("$expiresAt", soon), ...afterKey(after)))
       .ownedBy(gateway).orderBy(asc("$key")).limit(100).fetch(),
   );
@@ -63,7 +64,11 @@ export async function GET(req: Request) {
         .ownedBy(gateway).orderBy(asc("$key")).limit(100).fetch(),
     );
     const keeper = thinGroup(members.map((m) => ({ key: m.$key, capturedAt: m.capturedAt.value })));
-    if (keeper && expiringKeys.has(keeper)) keep.push(keeper);
+    // Banned data is left to expire. It is excluded from reads anyway, so keeping it alive would only cost gas.
+    const k = expiring.find((s) => s.$key === keeper);
+    const from = k ? await bannedFrom(k.worldId.value) : 0;
+    const banned = from !== 0 && Number(k!.capturedAt.value) >= from;
+    if (keeper && expiringKeys.has(keeper) && !banned) keep.push(keeper);
   }
 
   const devices = await scan((after) =>
