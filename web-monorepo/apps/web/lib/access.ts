@@ -4,6 +4,7 @@ import { addr, u64 } from "@arkiv-network/sdk/schema";
 import { type Hex, isHex } from "viem";
 import { arkivPublic, gatewayAddress, need } from "@/lib/arkiv";
 import { contractPaidUntil } from "@/lib/contract";
+import { bannedFrom } from "@/lib/consensus";
 import { decrypt, sampleKey } from "@/lib/crypto";
 import { datasetFilter, type Filter, matches, sampleFields } from "@/lib/filters";
 import { Datasets, Samples, Subscriptions } from "@/lib/schema";
@@ -40,14 +41,18 @@ export async function activeSubscriptions(address: Hex) {
   return out;
 }
 
-type SampleRow = Parameters<typeof sampleFields>[0];
+type SampleRow = Parameters<typeof sampleFields>[0] & { worldId: { value: string } };
 
-/** A predicate telling whether this viewer may decrypt a sample. Admins see everything. */
+/** A predicate telling whether this viewer may decrypt a sample. Admins see everything; a banned World ID's samples from its first strike on are never readable. */
 export async function readAccess(session: { address: Hex; admin: boolean } | null) {
-  if (!session) return () => false;
-  if (session.admin) return () => true;
+  if (!session) return async () => false;
+  if (session.admin) return async () => true;
   const subs = await activeSubscriptions(session.address);
-  return (s: SampleRow) => subs.some((d) => matches(d.filter, sampleFields(s)));
+  return async (s: SampleRow) => {
+    const from = await bannedFrom(s.worldId.value);
+    if (from && Number(s.capturedAt.value) >= from) return false;
+    return subs.some((d) => matches(d.filter, sampleFields(s)));
+  };
 }
 
 export const keyFor = (contentHash: string) => sampleKey(need("DATA_KEY"), contentHash);

@@ -2,8 +2,9 @@ import { ExpirationTime } from "@arkiv-network/sdk";
 import { and, asc, between, eq, gt, lt, startsWith } from "@arkiv-network/sdk/query";
 import { addr, key, u64 } from "@arkiv-network/sdk/schema";
 import type { Hex } from "viem";
+import { bannedFrom } from "@/lib/consensus";
 import { arkivPublic, arkivWallet, Devices, gatewayAddress, hasBearer, Samples } from "@/lib/arkiv";
-import { Datasets, Rewards } from "@/lib/schema";
+import { Admins, Datasets, Rewards } from "@/lib/schema";
 import { groupOf, thinGroup } from "@/lib/retention";
 
 const PRECISION = Number(process.env.THIN_GEOHASH_PRECISION ?? 7); // geohash-7 ≈ 153 m x 153 m
@@ -25,7 +26,7 @@ const afterKey = (after?: Hex) => (after ? [gt("$key", key(after))] : []);
 
 /**
  * Retention: extends samples about to expire, keeping only one per (device, geohash cell, time window),
- * and extends every device registration, dataset and reward epoch. Subscriptions are left to expire after their paid period. Schedule daily (Vercel cron or any scheduler) with
+ * and extends every device registration, dataset, reward epoch and admin grant. Subscriptions are left to expire after their paid period. Schedule daily (Vercel cron or any scheduler) with
  * `Authorization: Bearer $CRON_SECRET`.
  * shortcut: runs in one request; split into batches if a day's expiring set outgrows the function timeout.
  */
@@ -37,7 +38,7 @@ export async function GET(req: Request) {
   const soon = u64(currentBlock + BigInt(Math.ceil((WITHIN_DAYS * 86_400) / BLOCK_SECONDS)));
 
   const expiring = await scan((after) =>
-    pub.select({ $key: true, device: true, geohash: true, capturedAt: true })
+    pub.select({ $key: true, device: true, worldId: true, geohash: true, capturedAt: true })
       .from(Samples, { onMismatch: "throw" }).where(and(lt("$expiresAt", soon), ...afterKey(after)))
       .ownedBy(gateway).orderBy(asc("$key")).limit(100).fetch(),
   );
@@ -63,7 +64,11 @@ export async function GET(req: Request) {
         .ownedBy(gateway).orderBy(asc("$key")).limit(100).fetch(),
     );
     const keeper = thinGroup(members.map((m) => ({ key: m.$key, capturedAt: m.capturedAt.value })));
-    if (keeper && expiringKeys.has(keeper)) keep.push(keeper);
+    // Banned data is left to expire. It is excluded from reads anyway, so keeping it alive would only cost gas.
+    const k = expiring.find((s) => s.$key === keeper);
+    const from = k ? await bannedFrom(k.worldId.value) : 0;
+    const banned = from !== 0 && Number(k!.capturedAt.value) >= from;
+    if (keeper && expiringKeys.has(keeper) && !banned) keep.push(keeper);
   }
 
   const devices = await scan((after) =>
@@ -81,7 +86,12 @@ export async function GET(req: Request) {
       .ownedBy(gateway).orderBy(asc("$key")).limit(100).fetch(),
   );
 
-  const toExtend = [...keep, ...devices.map((d) => d.$key), ...datasets.map((d) => d.$key), ...rewards.map((r) => r.$key)];
+  const admins = await scan((after) =>
+    pub.select({ $key: true }).from(Admins, { onMismatch: "throw" }).where(and(lt("$expiresAt", soon), ...afterKey(after)))
+      .ownedBy(gateway).orderBy(asc("$key")).limit(100).fetch(),
+  );
+
+  const toExtend = [...keep, ...devices.map((d) => d.$key), ...datasets.map((d) => d.$key), ...rewards.map((r) => r.$key), ...admins.map((a) => a.$key)];
   const wallet = arkivWallet();
   for (let i = 0; i < toExtend.length; i += 50) {
     await wallet.executeBatch({
@@ -96,5 +106,6 @@ export async function GET(req: Request) {
     extendedDevices: devices.length,
     extendedDatasets: datasets.length,
     extendedRewardEpochs: rewards.length,
+    extendedAdmins: admins.length,
   });
 }

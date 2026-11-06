@@ -1,6 +1,7 @@
 import { desc, eq } from "@arkiv-network/sdk/query";
 import { addr } from "@arkiv-network/sdk/schema";
 import { getAddress, isAddress } from "viem";
+import { isBanned } from "@/lib/consensus";
 import { arkivPublic, arkivWallet, Devices, findDevice, gatewayAddress, hasBearer, registerDevice, Samples } from "@/lib/arkiv";
 
 const fail = (status: number, error: string) => Response.json({ error }, { status });
@@ -27,7 +28,10 @@ export async function GET(req: Request) {
  */
 export async function POST(req: Request) {
   if (!hasBearer(req, "REGISTRAR_TOKEN")) return fail(401, "unauthorized");
-  return registerDevice(await req.json().catch(() => null));
+  const b = await req.json().catch(() => null);
+  // Same ban check as /api/enroll: a banned human cannot register a new device.
+  if (typeof b?.worldId === "string" && (await isBanned(b.worldId.toLowerCase()))) return fail(403, "this World ID is banned");
+  return registerDevice(b);
 }
 
 /**

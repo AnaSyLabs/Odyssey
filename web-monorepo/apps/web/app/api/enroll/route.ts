@@ -2,6 +2,7 @@ import { hashSignal } from "@worldcoin/idkit/hashing";
 import { signRequest } from "@worldcoin/idkit/signing";
 import { getAddress, isAddress } from "viem";
 import { findDevice, need, registerDevice } from "@/lib/arkiv";
+import { isBanned } from "@/lib/consensus";
 import { getSession, unauthorized } from "@/lib/session";
 
 const ACTION = "register-device";
@@ -37,6 +38,8 @@ export async function POST(req: Request) {
   if (proof.signal_hash?.toLowerCase() !== hashSignal(device).toLowerCase()) return fail(400, "proof is not bound to this device address");
   // Fail before World ID records the verification, so the human can retry with the right device.
   if (await findDevice(device)) return fail(409, "device already registered");
+  // A banned human cannot enroll a new device. Checked before World ID records another verification.
+  if (await isBanned(`0x${BigInt(proof.nullifier).toString(16)}`)) return fail(403, "this World ID is banned");
 
   const res = await fetch(`https://developer.worldcoin.org/api/v4/verify/${need("WORLD_RP_ID")}`, {
     method: "POST",

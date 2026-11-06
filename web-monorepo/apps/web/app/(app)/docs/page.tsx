@@ -7,13 +7,15 @@ export const metadata: Metadata = { title: "Protocol · Odyssey" };
 const TOC = [
   ["overview", "Overview"],
   ["live", "What's live today"],
+  ["tracks", "Tracks"],
   ["access", "Access and payments"],
+  ["mcp", "Use it from an LLM (MCP)"],
   ["pipeline", "The pipeline"],
   ["sample", "What a sample proves"],
   ["validation", "Validation"],
   ["consensus", "Checking a neighbourhood"],
   ["stake", "Stake and slash"],
-  ["rewards", "Rewards"],
+  ["rewards", "Rewards and cash flow"],
   ["scale", "Why it scales"],
   ["privacy", "Privacy and consent"],
   ["roadmap", "Roadmap"],
@@ -91,11 +93,11 @@ export default function Docs() {
             head={["Pipeline step", "Vision", "Today"]}
             rows={[
               ["Capture and sign", "Secure element signs hash, time and witnesses", "Device key signs content hash, kind, mime, time, lat/lon and sensors hash. Location is pinned to Bandra until GPS lands."],
-              ["One human, one device", "World ID per device", "Registry on Arkiv binds a device key to a World ID nullifier, one device per human. The proof is checked by the registration page."],
-              ["Filter", "TEE gateway: blur, dedupe, quality", "Signature, registration and duplicate checks. No blurring or quality scoring yet."],
+              ["One human, one device", "World ID per device", "Registry on Arkiv binds a device key to a World ID nullifier, one device per human. /enroll verifies the proof, whose signal is the device address, and makes the signed-in wallet the payout address."],
+              ["Filter", "TEE gateway: blur, dedupe, quality", "Signature, registration, ban and duplicate checks. A clip replayed from another human is a strike. No blurring or quality scoring yet."],
               ["Store", "Encrypted batches on 0G", "Encrypted per sample: inline on Arkiv up to 96 KiB, 0G Storage above that."],
               ["Anchor", "One Merkle root per batch on-chain", "Each sample is a readonly Arkiv entity. Batch roots on a long-lived chain are still to come."],
-              ["Verify", "Staked VRF committee", "Not built. The consensus map under /mockups shows the design."],
+              ["Verify", "Staked VRF committee", "ConsensusRegistry is deployed on Galileo: allowlisted validators vote on each hex tile and two provable strikes ban a World ID. No staking or VRF yet; the consensus map under /mockups shows the design."],
               ["Pay", "Rewards root per epoch", "Labs pay the subscriptions contract in 0G. 70 % is split pro rata by samples to each device's payout wallet, published as a Merkle root per epoch, and claimed on-chain."],
             ]}
           />
@@ -129,6 +131,54 @@ export default function Docs() {
           </Note>
         </Section>
 
+        <Section id="tracks" title="Tracks">
+          <P>How the project maps to the sponsor tracks it targets: what is built, where, and where it stands.</P>
+          <H3>Arkiv · the data layer</H3>
+          <Table
+            head={["What we built", "Where", "Status"]}
+            rows={[
+              ["Every sample is a readonly Arkiv entity: metadata, geohash, signature, encrypted payload up to 96 KiB", <Mono key="a1">lib/schema.ts</Mono>, "Live-tested"],
+              ["Device registry, datasets, paid periods and reward epochs as gateway-owned entities", <Mono key="a2">app/api/*</Mono>, "Registry and datasets live-tested; rewards not yet run live"],
+              ["Geo search on a geohash index", <Mono key="a3">lib/query.ts</Mono>, "Live-tested"],
+              ["Retention job: extend what is worth keeping, let the rest and banned data expire", <Mono key="a4">app/api/cron/extend</Mono>, "Built, not scheduled yet"],
+            ]}
+          />
+          <H3>0G · payments, contracts and storage</H3>
+          <Table
+            head={["What we built", "Where", "Status"]}
+            rows={[
+              ["OdsySubscriptions on Galileo: 30-day dataset access paid in 0G, 70 % to contributors, Merkle reward claims", <Mono key="g1">contracts/src/OdsySubscriptions.sol</Mono>, "Deployed, 14 tests; subscribe and claim not yet confirmed end to end"],
+              ["ConsensusRegistry on Galileo: validator median per hex tile, two-strike ban", <Mono key="g2">contracts/src/ConsensusRegistry.sol</Mono>, "Deployed, 10 tests, hand-run live"],
+              ["0G Storage for payloads over 96 KiB", <Mono key="g3">lib/og.ts</Mono>, "Built, not yet confirmed with a large payload"],
+            ]}
+          />
+          <H3>World ID · one human, one device</H3>
+          <Table
+            head={["What we built", "Where", "Status"]}
+            rows={[
+              ["A device key bound to a World ID nullifier, one device per human; the proof's signal is the device address", <Mono key="w1">app/api/enroll</Mono>, "Built (World ID v4); not yet live-tested by us"],
+              ["Every sample carries the World ID that captured it", <Mono key="w2">Samples.worldId</Mono>, "Live"],
+              ["Two provable strikes ban a World ID: no uploads, no new device, data unreadable", <Mono key="w3">lib/consensus.ts</Mono>, "Contract run live; gateway path not yet end to end"],
+            ]}
+          />
+          <Note title="How enrollment works">
+            <P>
+              On <Mono>/enroll</Mono> a signed-in wallet enters the glasses&apos; address and MAC and approves in World App. The server
+              checks the proof with World&apos;s developer portal and that its signal is that device address, so one human&apos;s proof
+              cannot enroll another device. <Mono>POST /api/devices</Mono> is for an external registrar that verified World ID
+              itself. The screen under /mockups is only a demo.
+            </P>
+          </Note>
+          <H3>Deployed contracts (0G Galileo testnet)</H3>
+          <Table
+            head={["Contract", "Address"]}
+            rows={[
+              ["OdsySubscriptions", <a key="d1" className="underline" href="https://chainscan-galileo.0g.ai/address/0xc3a946516f2f0CE3fc2065543cb0a8E9b105A54e"><Mono>0xc3a946516f2f0CE3fc2065543cb0a8E9b105A54e</Mono></a>],
+              ["ConsensusRegistry", <a key="d2" className="underline" href="https://chainscan-galileo.0g.ai/address/0x83bea227e5D2C72f8F0F73E63175759D4E6055DC"><Mono>0x83bea227e5D2C72f8F0F73E63175759D4E6055DC</Mono></a>],
+            ]}
+          />
+        </Section>
+
         <Section id="access" title="Access and payments">
           <Sequence n={2} title="A lab subscribes to a dataset"
             actors={[
@@ -159,6 +209,37 @@ export default function Docs() {
             <li><b>The app</b> asks for a wallet sign-in before Datasets, Explore, the dataset map and Transactions. Signing a message costs no gas; signing out also disconnects the site in the wallet.</li>
             <li><b>Lab ingest</b> (<Mono>npm run lab:ingest</Mono>) pulls subscribed datasets into the lab&apos;s own storage, re-checking every sample, with an option to keep only the samples the retention policy keeps.</li>
           </Ul>
+        </Section>
+
+        <Section id="mcp" title="Use it from an LLM (MCP)">
+          <P>
+            Subscribers can search and read their datasets from Claude, Cursor or any other MCP client. It is retrieval only: the
+            model you connect writes the answer, and it only sees what your wallet has paid for.
+          </P>
+          <Ol>
+            <li>Sign in on Datasets and click <b>Create token</b> in the &ldquo;Use your datasets in an AI tool&rdquo; card.</li>
+            <li>Paste the config it shows into your client. The token lasts 7 days.</li>
+            <li>Ask your model things like &ldquo;list my datasets&rdquo; or &ldquo;find samples that mention mangoes in the Bandra dataset&rdquo;.</li>
+          </Ol>
+          <Table
+            head={["Tool", "What it does"]}
+            rows={[
+              [<Mono key="m1">list_datasets</Mono>, "Your active subscriptions and when access ends"],
+              [<Mono key="m2">search_samples</Mono>, "Keyword search over the text and sensor samples of one dataset, best matches first, with a snippet, place, time and content hash"],
+              [<Mono key="m3">get_sample</Mono>, "One sample in full, decrypted, if a subscription covers it"],
+            ]}
+          />
+          <Code label="Claude Code">{`
+claude mcp add --transport http odyssey https://<your-host>/api/mcp \\
+  --header "Authorization: Bearer <token>"
+`}</Code>
+          <Note kind="warn" title="Limits of this first version">
+            <P>
+              Keyword search only (no embeddings), over the newest 100 text and sensor samples per query. Images, audio, video and
+              0G-stored payloads are not returned. Tokens expire after 7 days and cannot be revoked earlier. There is no OAuth, so
+              ChatGPT&apos;s connector screen cannot use it; the OpenAI API can, through an MCP tool with a header.
+            </P>
+          </Note>
         </Section>
 
         <Section id="pipeline" title="The pipeline">
@@ -260,7 +341,7 @@ export default function Docs() {
             <li>Too few clips or too few different devices in a hexagon? It waits. Nothing is decided yet.</li>
             <li>Otherwise the contract works out how many clips to check, and checkers (validators) look at them.</li>
             <li>Each validator says how many of the checked clips passed. The middle answer wins.</li>
-            <li>If at least two thirds passed, the hexagon is accepted and its contributors get paid. If not, it is rejected.</li>
+            <li>If at least two thirds passed, the hexagon is accepted. If not, it is rejected. Payouts are meant to follow accepted hexagons, but today they are not connected: rewards come from subscriptions.</li>
           </Ol>
           <H3>Two strikes and you&apos;re out</H3>
           <P>
@@ -286,6 +367,14 @@ export default function Docs() {
               The contract is <Mono>contracts/src/ConsensusRegistry.sol</Mono>. The shared settings are set once at deploy from{" "}
               <Mono>contracts/.env.example</Mono>; each dataset picks its own hexagon size, check rate and pass mark within them.
             </P>
+            <P>
+              It is live on 0G Galileo at{" "}
+              <a className="underline" href="https://chainscan-galileo.0g.ai/address/0x83bea227e5D2C72f8F0F73E63175759D4E6055DC">
+                <Mono>0x83be…55DC</Mono>
+              </a>
+              . The gateway checks it on every upload, registration and read, so a banned World ID can&apos;t upload, register a new
+              device or have its data decrypted. It is a testnet deploy with three throwaway validators and has not been audited.
+            </P>
           </Note>
         </Section>
 
@@ -308,11 +397,51 @@ export default function Docs() {
           </Note>
         </Section>
 
-        <Section id="rewards" title="Rewards">
-          <P>Each epoch publishes one Merkle root of everyone&apos;s rewards. Contributors claim with a proof, gaslessly.</P>
-          <Code label="per verified clip">{`
+        <Section id="rewards" title="Rewards and cash flow">
+          <P>
+            Labs pay for datasets in 0G on Galileo. The contract splits every payment on the spot, and contributors collect their
+            share by epoch with a Merkle proof.
+          </P>
+          <Figure n={5} title="Where the money goes" w={1000} h={375}
+            caption="One payment, split on-chain. Gas is paid by whoever sends each transaction, and the gateway wallet pays Arkiv and 0G Storage from its own funds, not from this revenue.">
+            <Node x={10} y={30} w={160} h={90} title="Lab wallet" tech="MetaMask" lines={["pays the dataset price", "e.g. 0.01 0G"]} />
+            <Node x={215} y={30} w={160} h={90} title="subscribe()" tech="OdsySubscriptions" lines={["exact price only", "paidUntil += 30 days"]} tone="accent" />
+            <Node x={420} y={30} w={160} h={90} title="Contributor pool" tech="70 % · unallocated" lines={["waits for an epoch"]} />
+            <Node x={625} y={30} w={160} h={90} title="Reward epoch" tech="Merkle root" lines={["pro rata by samples", "per payout wallet"]} tone="accent" />
+            <Node x={830} y={30} w={160} h={90} title="Payout wallets" tech="claim(proof)" lines={["paid in 0G", "claimer pays gas"]} />
+            <Edge pts={[[170, 75], [215, 75]]} />
+            <Edge pts={[[375, 75], [420, 75]]} />
+            <Edge pts={[[580, 75], [625, 75]]} />
+            <Edge pts={[[785, 75], [830, 75]]} />
+            <Node x={215} y={185} w={160} h={90} title="Treasury" tech="30 %" lines={["treasuryBalance"]} />
+            <Node x={420} y={185} w={160} h={90} title="Owner" tech="withdrawTreasury()" lines={["treasury only, never", "contributor funds"]} />
+            <Edge pts={[[295, 120], [295, 185]]} label="30 %" at={[295, 152]} />
+            <Edge pts={[[375, 230], [420, 230]]} />
+            <Node x={10} y={300} w={300} h={65} title="Costs outside the split" lines={["lab, owner, claimer each pay own gas", "gateway pays Arkiv + 0G Storage"]} tone="ext" />
+            <Node x={330} y={300} w={300} h={65} title="Not paid yet" lines={["validators: no reward or stake yet", "consensus verdicts do not gate payouts"]} tone="ext" />
+            <Node x={650} y={300} w={340} h={65} title="Stays in the pool" lines={["share of devices without a payout", "wallet, and rounding dust: next epoch"]} tone="ext" />
+          </Figure>
+          <Table
+            head={["Step", "Who", "Money moves"]}
+            rows={[
+              ["Subscribe", "Lab", "Pays exactly the dataset price plus gas. Access lasts 30 days; renewals stack, up to 150 days prepaid"],
+              ["Split", "Contract", "70 % to the contributor pool, the rest to the treasury. The owner can change the share for future payments, never below 50 %"],
+              ["Publish an epoch", "Owner", "Splits the pool across payout wallets pro rata by each device's sample count and publishes one Merkle root. The contract refuses a total above the pool"],
+              ["Claim", "Payout wallet, or anyone for it", "Pays the account its share. The claimer pays gas, and a root can never pay out more than its published total"],
+              ["Withdraw", "Owner", "Moves the treasury balance only"],
+            ]}
+          />
+          <Note title="Worked example">
+            <P>
+              A lab pays 0.01 0G. 0.007 goes to the contributor pool and 0.003 to the treasury. The dataset has samples from three
+              devices: A has 60, B has 30 and C has 10 but no payout wallet. At the next epoch A&apos;s wallet gets 0.0042 and B&apos;s
+              gets 0.0021; C&apos;s 0.0007 stays in the pool for a later epoch.
+            </P>
+          </Note>
+          <Code label="the design, not yet built">{`
 reward = base × quality score × rarity
 # rarity rewards under-covered places, activities and languages
+# today: pro rata by sample count, no quality score or rarity yet
 `}</Code>
         </Section>
 
@@ -341,6 +470,7 @@ reward = base × quality score × rarity
           <P><b>Done:</b> signed uploads, device registry, encrypted storage on Arkiv and 0G, geo search, dataset subscriptions on a contract with a contributor split, and lab ingest. <b>Next:</b> batch roots on a long-lived chain, real hardware with GPS.</P>
           <H3>Phase 2 · Stake it</H3>
           <P>Permissioned staked validators, honeypots, challenge window and slashing.</P>
+          <P><b>Done:</b> the consensus contract on Galileo (validator median per tile, two-strike ban) and its enforcement in the gateway. <b>Next:</b> staking and slashing, commit-reveal, honeypots and a challenge window.</P>
           <H3>Phase 3 · Open it</H3>
           <P>Permissionless validators, TEE gateways, rarity rewards and the lab marketplace with licensing.</P>
           <H3>Phase 4 · Value it</H3>

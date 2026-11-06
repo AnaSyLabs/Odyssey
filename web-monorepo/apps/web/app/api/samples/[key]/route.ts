@@ -19,7 +19,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ key: st
   const session = await getSession();
   // The wallet that enrolled the device (its payout address) may read what the device captured.
   const owns = async () => !!session && (await findDevice(s.device.value))?.payout?.value?.toLowerCase() === session.address.toLowerCase();
-  const readable = !enc || (await readAccess(session))(s) || (await owns());
+  const readable = !enc || (await (await readAccess(session))(s)) || (await owns());
   const sensors = readable ? open(hexBytes(s.sensors.value), enc, contentHash).toString("utf8") : undefined;
   const sensorsHash = s.sensorsHash?.value ?? sha256(sensors!); // legacy plaintext samples carry the sensors themselves
   const u = { kind: s.kind.value as Kind, mime: s.mime.value, capturedAt: Number(s.capturedAt.value), lat: s.lat.value, lon: s.lon.value };

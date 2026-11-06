@@ -8,7 +8,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ key: st
   const { key } = await params;
   const s = await loadSample(key);
   if (!s) return Response.json({ error: "not found" }, { status: 404 });
-  if (s.enc?.value && !(await readAccess(await getSession()))(s)) {
+  if (s.enc?.value && !(await (await readAccess(await getSession()))(s))) {
     return Response.json({ error: "subscribe to a dataset that covers this sample" }, { status: 403 });
   }
   const blob = s.data ? hexBytes(s.data.value) : await downloadFrom0G(s.ogRoot!.value);

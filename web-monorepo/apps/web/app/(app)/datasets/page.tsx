@@ -3,6 +3,7 @@ import { LuArrowUpRight, LuBadgeCheck, LuHexagon, LuLock, LuLockOpen, LuPlus, Lu
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { encodeFunctionData, type Hex } from "viem";
+import McpAccess from "@/components/McpAccess";
 import { CardsSkeleton, Loading, RowsSkeleton } from "@/components/Skeleton";
 import { errorText, useWallet } from "@/components/wallet";
 import { ogTxUrl } from "@/lib/chains";
@@ -65,6 +66,8 @@ export default function Datasets() {
           <button className="btn ml-auto" onClick={() => { setCreating(true); setOpenKey(undefined); }}><LuPlus size={16} />New dataset</button>
         )}
       </header>
+
+      {session && <McpAccess />}
 
       <div className="glass flex flex-wrap items-center gap-2 p-3">
         <label className="relative min-w-60 flex-1">
