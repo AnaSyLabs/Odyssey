@@ -85,6 +85,52 @@ Slashing only happens on **objective evidence** (bad signature, duplicate, faile
 | Next.js server + MongoDB on Vercel | Gateway and coordinator MVP |
 | Arkiv gateway + geohash index (`apps/web/app/api`) | Queryable, signed sample index; see below |
 
+## Tracks
+
+How the project maps to the sponsor tracks it targets. Each row says what is built, where it lives, and how to see it. Honest status is in the last column.
+
+### Arkiv: the data layer
+
+| What we built | Where | Status |
+|---|---|---|
+| Every sample is a readonly Arkiv entity (metadata, geohash, signature, encrypted payload up to 96 KiB) | `lib/schema.ts`, `app/api/ingest` | Live-tested on Rabdi |
+| Device registry, datasets, paid periods and reward epochs as gateway-owned entities | `lib/schema.ts`, `app/api/devices`, `app/api/datasets`, `lib/rewards.ts` | Live-tested: registry, datasets. Rewards not yet run live |
+| Geo search ("what was captured near here?") on a geohash index | `lib/geo.ts`, `lib/query.ts`, `app/api/samples` | Live-tested |
+| Retention: extend only the samples worth keeping, let the rest and banned data expire | `app/api/cron/extend`, `lib/retention.ts` | Built, not run on a schedule yet |
+
+See it: TESTING.md part 2, steps 2 to 4. Explore shows samples on the map straight from Arkiv.
+
+### 0G: payments, contracts and storage
+
+| What we built | Where | Status |
+|---|---|---|
+| `OdsySubscriptions` on Galileo: labs pay in 0G for 30-day dataset access, 70 % goes to contributors, Merkle reward claims | `contracts/src/OdsySubscriptions.sol`, `lib/contract.ts` | Deployed, 14 tests. Subscribe and claim not yet confirmed end to end |
+| `ConsensusRegistry` on Galileo: hex-tile verdicts by validator median, two-strike ban | `contracts/src/ConsensusRegistry.sol`, `lib/consensus.ts` | Deployed, 10 tests, hand-run live |
+| 0G Storage for payloads over 96 KiB, root kept on Arkiv | `lib/og.ts` | Built, not yet confirmed with a large payload |
+
+See it: TESTING.md parts 2 and 3. Both contracts are linked under *Deployed contracts* below.
+
+### World ID: one human, one device
+
+| What we built | Where | Status |
+|---|---|---|
+| A device key is bound to a World ID nullifier, one device per human | `app/api/devices`, `Devices` schema | Built. The proof itself is checked by a separate registration page, not here |
+| Every sample carries the World ID that captured it | `Samples.worldId` | Live |
+| Two provable strikes ban a World ID: no uploads, no new device, data from its first strike unreadable | `ConsensusRegistry`, `lib/consensus.ts`, `lib/access.ts` | Built, contract run live, gateway path not yet end to end |
+
+Not built: the World ID proof verification (`POST /api/devices` trusts the registration page through `REGISTRAR_TOKEN`). `/mockups/enroll` is a demo of the flow, not a real registration.
+
+## Deployed contracts
+
+Both on 0G Galileo Testnet (chain ID 16602), deployed by the same testnet wallet, unaudited.
+
+| Contract | Address | Deploy |
+|---|---|---|
+| `OdsySubscriptions` | [`0xc3a946516f2f0CE3fc2065543cb0a8E9b105A54e`](https://chainscan-galileo.0g.ai/address/0xc3a946516f2f0CE3fc2065543cb0a8E9b105A54e) | [tx](https://chainscan-galileo.0g.ai/tx/0xc83445b99003f52c1e12007bc8072edf5c95c54f7ae1b6cd4875b2c40f7ef980), block 64,085,686 |
+| `ConsensusRegistry` | [`0x83bea227e5D2C72f8F0F73E63175759D4E6055DC`](https://chainscan-galileo.0g.ai/address/0x83bea227e5D2C72f8F0F73E63175759D4E6055DC) | [tx](https://chainscan-galileo.0g.ai/tx/0x032d1d358c84b4563dc39516c776d7198f0046f3b588ff7ed9db33490be12e34), block 64,080,632 |
+
+`SUBSCRIPTIONS_ADDRESS` and `SUBSCRIPTIONS_FROM_BLOCK` are required by the gateway for any signed-in request. Without them `/api/datasets`, `/api/samples`, `/api/subscriptions` and `/api/rewards` return 500 with `Missing env SUBSCRIPTIONS_ADDRESS`.
+
 ## The web app
 
 A Next.js app and gateway in `web-monorepo/apps/web`. Live pages talk to Arkiv and 0G Galileo and ask for a wallet sign-in. Everything under `/mockups` runs on demo data and needs no sign-in.

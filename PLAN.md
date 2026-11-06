@@ -10,7 +10,7 @@ Testnets only (Arkiv Rabdi, 0G Galileo). Mainnet is out of scope until the audit
 |---|---|
 | Web app (`web-monorepo/apps/web`) | Done: landing, 3D device, wiring lessons, protocol docs, live Datasets / Explore / Activity behind wallet sign-in, demo screens under `/mockups` |
 | Gateway (Arkiv + 0G) | Done: signed and encrypted ingest, geo search, paid subscriptions, lab ingest, retention cron. Live-tested up to ingest and dataset creation |
-| `OdsySubscriptions` | Written and unit-tested (14 tests). Not yet deployed or run live |
+| `OdsySubscriptions` | Deployed on Galileo `0xc3a946516f2f0CE3fc2065543cb0a8E9b105A54e`, 14 tests. Subscribe and claim not yet run live |
 | `ConsensusRegistry` | Deployed on Galileo `0x83bea227e5D2C72f8F0F73E63175759D4E6055DC`, 10 tests, hand-tested live. Gateway enforces bans |
 | Firmware (`firmware/`) | In progress, not wired to the gateway |
 | Contract audit | Not done |
@@ -20,7 +20,8 @@ Testnets only (Arkiv Rabdi, 0G Galileo). Mainnet is out of scope until the audit
 Steps are in [TESTING.md](TESTING.md).
 
 - [ ] Run `forge test` and `npm test` (expect 24 and 13 passing).
-- [ ] Deploy `OdsySubscriptions` to Galileo; set `SUBSCRIPTIONS_ADDRESS` and `SUBSCRIPTIONS_FROM_BLOCK`.
+- [x] Deploy `OdsySubscriptions` to Galileo and set `SUBSCRIPTIONS_ADDRESS` and `SUBSCRIPTIONS_FROM_BLOCK` locally.
+- [ ] Set the same two variables on Vercel and redeploy (signed-in requests return 500 until then).
 - [ ] Create a dataset, subscribe as a lab, pull it with `lab:ingest`.
 - [ ] Publish reward epoch 1 and claim it from the payout wallet.
 - [ ] Upload a payload over 96 KiB to exercise 0G Storage.
