@@ -118,7 +118,7 @@ See it: TESTING.md parts 2 and 3. Both contracts are linked under *Deployed cont
 | Every sample carries the World ID that captured it | `Samples.worldId` | Live |
 | Two provable strikes ban a World ID: no uploads, no new device, data from its first strike unreadable | `ConsensusRegistry`, `lib/consensus.ts`, `lib/access.ts` | Built, contract run live, gateway path not yet end to end |
 
-Enrollment is `/enroll`: sign in with a wallet, enter the glasses' address and MAC, approve in World App (or `simulator.worldcoin.org` with a staging app). The signed-in wallet becomes the device's payout address. `POST /api/devices` remains for an external registrar that verifies World ID itself (`REGISTRAR_TOKEN`). `/mockups/enroll` is only a demo of the flow. Setup: create an app and a `register-device` action at developer.world.org and set `WORLD_APP_ID`, `WORLD_RP_ID` and `WORLD_RP_SIGNING_KEY`, plus `WORLD_ENVIRONMENT=staging` to test with the simulator. Design notes: [docs/odsy_provenance_network.md](docs/odsy_provenance_network.md).
+Enrollment is `/enroll`: sign in with a wallet, enter the glasses' address and MAC, approve in World App (or `simulator.worldcoin.org` with a staging app). The signed-in wallet becomes the device's payout address. `POST /api/devices` remains for an external registrar that verifies World ID itself (`REGISTRAR_TOKEN`). `/mockups/enroll` is only a demo of the flow. Setup: create an app and a `register-device` action at developer.world.org and set `WORLD_APP_ID`, `WORLD_RP_ID` and `WORLD_RP_SIGNING_KEY`, plus `WORLD_ENVIRONMENT=staging` to test with the simulator. Design notes: [docs/odsy_provenance_network.md](docs/odsy_provenance_network.md); step by step: [docs/enrollment_and_capture.md](docs/enrollment_and_capture.md).
 
 ## Deployed contracts
 
@@ -210,7 +210,7 @@ npm run dev   # http://localhost:3000
 │                   scripts/simulate-device.ts (fake glasses), scripts/lab-ingest.ts (lab-side verified sync)
 ├── firmware/      ESP32 glasses: `odsy_glasses_camera` (camera capture, secp256k1 device key, signed upload) plus mic, IR, IMU and OLED sketches
 ├── contracts/     Foundry: OdsySubscriptions (subscriptions + reward claims) and ConsensusRegistry (tile verdicts, two-strike ban)
-├── docs/          Screenshots used in this README and the provenance design note (odsy_provenance_network.md)
+├── docs/          Screenshots used in this README, the provenance design note (odsy_provenance_network.md) and how enrollment and capture work (enrollment_and_capture.md)
 ├── .claude/       Agent skills (Solidity security, OpenZeppelin, token checks)
 ├── .cursor/       Cursor rules (Ponytail)
 ├── AGENTS.md      Rules for AI coding agents
