@@ -23,7 +23,7 @@ Odsy turns every pair of glasses, every sensor and every phone into a **paid, ve
 | One person can run 1,000 fake devices | One human, one device: linked with World ID (Proof of Human) |
 | Datasets get edited, poisoned or relabelled after the fact | Batch Merkle roots on-chain: any change breaks the proof |
 | Checking every sample doesn't scale | Optimistic acceptance plus random, staked spot-checks of 1 to 5 % |
-| Contributors give data away for free | Gasless, batched payouts to every contributor |
+| Contributors give data away for free | Batched payouts: one Merkle root per epoch, each contributor claims with a proof |
 | Immutable storage vs privacy law | Encrypted per batch; destroy the key to forget the data (crypto-shredding) |
 
 ---
@@ -43,8 +43,8 @@ Encrypted batches go to 0G Storage. One Merkle root per batch goes on-chain, so 
 Each batch opens a challenge window. A VRF-picked committee of staked validators scores a small random sample (commit-reveal, so nobody copies votes). Hidden honeypots grade the validators. Anyone can challenge with a bond.
 
 **5. Pay: one root, many claims.**
-Each epoch publishes a rewards Merkle root. Contributors claim gaslessly.
-`reward = base × quality score × rarity`
+Each epoch publishes a rewards Merkle root. Contributors claim with a proof.
+`reward = base × quality score × rarity` is the design. Today the split is pro rata by sample count (see *Where the money goes*).
 
 ---
 
@@ -130,6 +130,39 @@ Both on 0G Galileo Testnet (chain ID 16602), deployed by the same testnet wallet
 | `ConsensusRegistry` | [`0x83bea227e5D2C72f8F0F73E63175759D4E6055DC`](https://chainscan-galileo.0g.ai/address/0x83bea227e5D2C72f8F0F73E63175759D4E6055DC) | [tx](https://chainscan-galileo.0g.ai/tx/0x032d1d358c84b4563dc39516c776d7198f0046f3b588ff7ed9db33490be12e34), block 64,080,632 |
 
 `SUBSCRIPTIONS_ADDRESS` and `SUBSCRIPTIONS_FROM_BLOCK` are required by the gateway for any signed-in request. Without them `/api/datasets`, `/api/samples`, `/api/subscriptions` and `/api/rewards` return 500 with `Missing env SUBSCRIPTIONS_ADDRESS`.
+
+## Where the money goes
+
+Labs pay for datasets in 0G on Galileo. The contract splits every payment on the spot, and contributors collect their share by epoch.
+
+```mermaid
+flowchart LR
+  Lab["Lab wallet"] -->|"exact price, e.g. 0.01 0G"| Sub["subscribe()<br/>OdsySubscriptions"]
+  Sub -->|"70 %"| Pool["Contributor pool<br/>(unallocated)"]
+  Sub -->|"30 %"| Treasury["Treasury"]
+  Pool -->|"epoch: Merkle root,<br/>pro rata by samples"| Epoch["Reward epoch"]
+  Epoch -->|"claim(proof)"| Payout["Payout wallets"]
+  Treasury -->|"withdrawTreasury()"| Owner["Owner"]
+  Pool -. "no payout wallet,<br/>rounding dust" .-> Pool
+```
+
+**Worked example.** A lab pays **0.01 0G** for a dataset. The contract sets **0.007** aside for contributors and **0.003** for the treasury. The dataset holds samples from three devices: A has 60, B has 30, C has 10 and no payout wallet. When the owner publishes the epoch, A's wallet gets 0.0042, B's gets 0.0021, and C's 0.0007 stays in the pool for a later epoch.
+
+| Step | Who | Money moves |
+|---|---|---|
+| Subscribe | Lab | Pays exactly the dataset price plus gas. Access lasts 30 days; renewals stack, up to 150 days prepaid |
+| Split | Contract | `contributorBps` (7000 = 70 %) to the contributor pool, the rest to the treasury. The owner can change it, never below 50 %, for future payments only |
+| Publish an epoch | Owner (`npm run rewards:publish`) | Splits the pool across payout wallets pro rata by each device's sample count, publishes one Merkle root. The contract refuses a total above the pool |
+| Claim | Payout wallet, or anyone on its behalf | `claim(epoch, account, amount, proof)` pays the account. The claimer pays gas, and a root can never pay out more than its published total |
+| Withdraw | Owner | `withdrawTreasury(to)` moves the treasury balance only, never contributor funds |
+
+**What is not paid from this flow**
+- **Gas** is paid by whoever sends the transaction: the lab to subscribe, the owner to set prices, publish epochs and withdraw, the claimer to claim.
+- **Storage** is not paid from revenue. The gateway wallet pays Arkiv gas (tGLM) for every sample, registration and extension, and 0G Storage fees for large payloads, out of its own funds.
+- **Validators are not paid yet.** The consensus contract has no rewards or staking, and its tile verdicts do not gate payouts. Rewards today follow subscriptions only.
+- **Unclaimed money** stays in the contract: shares of devices without a payout wallet and rounding dust remain in the pool for a later epoch.
+
+Code: `contracts/src/OdsySubscriptions.sol`, `lib/rewards.ts`, `scripts/publish-rewards.ts`.
 
 ## The web app
 
@@ -448,7 +481,7 @@ The map is cut into hexagons. For each hexagon and each day (a *tile*) we spot-c
 
 1. Too few clips or devices in the hexagon? It waits.
 2. Otherwise validators check a handful of clips and each says how many passed. The middle answer wins.
-3. If two thirds passed, the tile is accepted and contributors get paid. If not, it is rejected.
+3. If two thirds passed, the tile is accepted. If not, it is rejected. (Payouts are meant to follow accepted tiles, but today they do not: rewards come from subscriptions, see *Where the money goes*.)
 4. **Two strikes:** a device caught with *provable* bad data twice (fake signature, copied clip, failed honeypot, impossible location) gets its World ID banned. Its data from the first strike onward is left out. Being outvoted is never a strike. Admins can lift a ban.
 
 ### How the gateway uses it

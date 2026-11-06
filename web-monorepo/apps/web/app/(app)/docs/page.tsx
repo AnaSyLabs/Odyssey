@@ -15,7 +15,7 @@ const TOC = [
   ["validation", "Validation"],
   ["consensus", "Checking a neighbourhood"],
   ["stake", "Stake and slash"],
-  ["rewards", "Rewards"],
+  ["rewards", "Rewards and cash flow"],
   ["scale", "Why it scales"],
   ["privacy", "Privacy and consent"],
   ["roadmap", "Roadmap"],
@@ -339,7 +339,7 @@ claude mcp add --transport http odyssey https://<your-host>/api/mcp \\
             <li>Too few clips or too few different devices in a hexagon? It waits. Nothing is decided yet.</li>
             <li>Otherwise the contract works out how many clips to check, and checkers (validators) look at them.</li>
             <li>Each validator says how many of the checked clips passed. The middle answer wins.</li>
-            <li>If at least two thirds passed, the hexagon is accepted and its contributors get paid. If not, it is rejected.</li>
+            <li>If at least two thirds passed, the hexagon is accepted. If not, it is rejected. Payouts are meant to follow accepted hexagons, but today they are not connected: rewards come from subscriptions.</li>
           </Ol>
           <H3>Two strikes and you&apos;re out</H3>
           <P>
@@ -395,11 +395,51 @@ claude mcp add --transport http odyssey https://<your-host>/api/mcp \\
           </Note>
         </Section>
 
-        <Section id="rewards" title="Rewards">
-          <P>Each epoch publishes one Merkle root of everyone&apos;s rewards. Contributors claim with a proof, gaslessly.</P>
-          <Code label="per verified clip">{`
+        <Section id="rewards" title="Rewards and cash flow">
+          <P>
+            Labs pay for datasets in 0G on Galileo. The contract splits every payment on the spot, and contributors collect their
+            share by epoch with a Merkle proof.
+          </P>
+          <Figure n={5} title="Where the money goes" w={1000} h={375}
+            caption="One payment, split on-chain. Gas is paid by whoever sends each transaction, and the gateway wallet pays Arkiv and 0G Storage from its own funds, not from this revenue.">
+            <Node x={10} y={30} w={160} h={90} title="Lab wallet" tech="MetaMask" lines={["pays the dataset price", "e.g. 0.01 0G"]} />
+            <Node x={215} y={30} w={160} h={90} title="subscribe()" tech="OdsySubscriptions" lines={["exact price only", "paidUntil += 30 days"]} tone="accent" />
+            <Node x={420} y={30} w={160} h={90} title="Contributor pool" tech="70 % · unallocated" lines={["waits for an epoch"]} />
+            <Node x={625} y={30} w={160} h={90} title="Reward epoch" tech="Merkle root" lines={["pro rata by samples", "per payout wallet"]} tone="accent" />
+            <Node x={830} y={30} w={160} h={90} title="Payout wallets" tech="claim(proof)" lines={["paid in 0G", "claimer pays gas"]} />
+            <Edge pts={[[170, 75], [215, 75]]} />
+            <Edge pts={[[375, 75], [420, 75]]} />
+            <Edge pts={[[580, 75], [625, 75]]} />
+            <Edge pts={[[785, 75], [830, 75]]} />
+            <Node x={215} y={185} w={160} h={90} title="Treasury" tech="30 %" lines={["treasuryBalance"]} />
+            <Node x={420} y={185} w={160} h={90} title="Owner" tech="withdrawTreasury()" lines={["treasury only, never", "contributor funds"]} />
+            <Edge pts={[[295, 120], [295, 185]]} label="30 %" at={[295, 152]} />
+            <Edge pts={[[375, 230], [420, 230]]} />
+            <Node x={10} y={300} w={300} h={65} title="Costs outside the split" lines={["lab, owner, claimer each pay own gas", "gateway pays Arkiv + 0G Storage"]} tone="ext" />
+            <Node x={330} y={300} w={300} h={65} title="Not paid yet" lines={["validators: no reward or stake yet", "consensus verdicts do not gate payouts"]} tone="ext" />
+            <Node x={650} y={300} w={340} h={65} title="Stays in the pool" lines={["share of devices without a payout", "wallet, and rounding dust: next epoch"]} tone="ext" />
+          </Figure>
+          <Table
+            head={["Step", "Who", "Money moves"]}
+            rows={[
+              ["Subscribe", "Lab", "Pays exactly the dataset price plus gas. Access lasts 30 days; renewals stack, up to 150 days prepaid"],
+              ["Split", "Contract", "70 % to the contributor pool, the rest to the treasury. The owner can change the share for future payments, never below 50 %"],
+              ["Publish an epoch", "Owner", "Splits the pool across payout wallets pro rata by each device's sample count and publishes one Merkle root. The contract refuses a total above the pool"],
+              ["Claim", "Payout wallet, or anyone for it", "Pays the account its share. The claimer pays gas, and a root can never pay out more than its published total"],
+              ["Withdraw", "Owner", "Moves the treasury balance only"],
+            ]}
+          />
+          <Note title="Worked example">
+            <P>
+              A lab pays 0.01 0G. 0.007 goes to the contributor pool and 0.003 to the treasury. The dataset has samples from three
+              devices: A has 60, B has 30 and C has 10 but no payout wallet. At the next epoch A&apos;s wallet gets 0.0042 and B&apos;s
+              gets 0.0021; C&apos;s 0.0007 stays in the pool for a later epoch.
+            </P>
+          </Note>
+          <Code label="the design, not yet built">{`
 reward = base × quality score × rarity
 # rarity rewards under-covered places, activities and languages
+# today: pro rata by sample count, no quality score or rarity yet
 `}</Code>
         </Section>
 
