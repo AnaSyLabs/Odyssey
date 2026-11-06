@@ -6,7 +6,7 @@ import { datasetFilter } from "@/lib/filters";
 import { rank, type Tool } from "@/lib/mcp-core";
 import { findSamples } from "@/lib/query";
 import { Datasets } from "@/lib/schema";
-import { isAdmin } from "@/lib/session";
+import { isAdmin } from "@/lib/admins";
 
 // shortcut: ranks the newest MAX_DOCS text/sensor samples of a dataset per query; add an index or embeddings when datasets outgrow that.
 const MAX_DOCS = 100;
@@ -31,8 +31,8 @@ const meta = (s: Row) => ({
 });
 
 /** The three tools, bound to one wallet. Everything goes through readAccess, the same check as the web app. */
-export function toolsFor(address: `0x${string}`): Tool[] {
-  const session = { address, admin: isAdmin(address) };
+export async function toolsFor(address: `0x${string}`): Promise<Tool[]> {
+  const session = { address, admin: await isAdmin(address) };
   return [
     {
       name: "list_datasets",

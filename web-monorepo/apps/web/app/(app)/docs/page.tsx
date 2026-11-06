@@ -93,7 +93,7 @@ export default function Docs() {
             head={["Pipeline step", "Vision", "Today"]}
             rows={[
               ["Capture and sign", "Secure element signs hash, time and witnesses", "Device key signs content hash, kind, mime, time, lat/lon and sensors hash. Location is pinned to Bandra until GPS lands."],
-              ["One human, one device", "World ID per device", "Registry on Arkiv binds a device key to a World ID nullifier, one device per human. The proof is checked by the registration page."],
+              ["One human, one device", "World ID per device", "Registry on Arkiv binds a device key to a World ID nullifier, one device per human. /enroll verifies the proof, whose signal is the device address, and makes the signed-in wallet the payout address."],
               ["Filter", "TEE gateway: blur, dedupe, quality", "Signature, registration, ban and duplicate checks. A clip replayed from another human is a strike. No blurring or quality scoring yet."],
               ["Store", "Encrypted batches on 0G", "Encrypted per sample: inline on Arkiv up to 96 KiB, 0G Storage above that."],
               ["Anchor", "One Merkle root per batch on-chain", "Each sample is a readonly Arkiv entity. Batch roots on a long-lived chain are still to come."],
@@ -156,15 +156,17 @@ export default function Docs() {
           <Table
             head={["What we built", "Where", "Status"]}
             rows={[
-              ["A device key bound to a World ID nullifier, one device per human", <Mono key="w1">app/api/devices</Mono>, "Built; the proof is checked by a separate registration page"],
+              ["A device key bound to a World ID nullifier, one device per human; the proof's signal is the device address", <Mono key="w1">app/api/enroll</Mono>, "Built (World ID v4); not yet live-tested by us"],
               ["Every sample carries the World ID that captured it", <Mono key="w2">Samples.worldId</Mono>, "Live"],
               ["Two provable strikes ban a World ID: no uploads, no new device, data unreadable", <Mono key="w3">lib/consensus.ts</Mono>, "Contract run live; gateway path not yet end to end"],
             ]}
           />
-          <Note kind="warn" title="Not built">
+          <Note title="How enrollment works">
             <P>
-              World ID proof verification is not done in this app; <Mono>POST /api/devices</Mono> trusts the registration page. The
-              enrollment screen under /mockups is a demo of the flow.
+              On <Mono>/enroll</Mono> a signed-in wallet enters the glasses&apos; address and MAC and approves in World App. The server
+              checks the proof with World&apos;s developer portal and that its signal is that device address, so one human&apos;s proof
+              cannot enroll another device. <Mono>POST /api/devices</Mono> is for an external registrar that verified World ID
+              itself. The screen under /mockups is only a demo.
             </P>
           </Note>
           <H3>Deployed contracts (0G Galileo testnet)</H3>

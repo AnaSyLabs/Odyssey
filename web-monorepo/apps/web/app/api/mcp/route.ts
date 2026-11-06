@@ -11,7 +11,7 @@ export async function POST(req: Request) {
   const address = readToken(req.headers.get("authorization"), need("SESSION_SECRET"));
   if (!address) return Response.json({ error: "missing or invalid bearer token" }, { status: 401, headers: { "www-authenticate": "Bearer" } });
   const body = await req.json().catch(() => null);
-  const tools = toolsFor(address);
+  const tools = await toolsFor(address);
   if (Array.isArray(body)) {
     const replies = (await Promise.all(body.map((m) => handleRpc(m, tools)))).filter((r) => r !== null);
     return replies.length ? Response.json(replies) : new Response(null, { status: 202 });
