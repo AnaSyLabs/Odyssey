@@ -12,7 +12,7 @@ export function gate(input: GateInput): Promise<Decision> {
   return decide(input, {
     baseUrl: process.env.OG_COMPUTE_BASE_URL ?? "https://router-api.0g.ai/v1",
     apiKey: process.env.OG_COMPUTE_API_KEY ?? "",
-    model: process.env.OG_COMPUTE_MODEL ?? "qwen2.5-vl-72b-instruct",
+    model: process.env.OG_COMPUTE_MODEL ?? "0gm-1.0-35b-a3b",
     verifyTee: process.env.OG_COMPUTE_VERIFY_TEE !== "false",
     labels: process.env.OG_LABELS === "true",
     timeoutMs: Number(process.env.OG_COMPUTE_TIMEOUT_MS ?? 20_000),

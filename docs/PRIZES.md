@@ -31,9 +31,9 @@ flowchart LR
 
 ### Still ours to do (cannot be done from code alone)
 
-- [ ] Get a key at pc.0g.ai (Dashboard, API Keys) and deposit 0G. Set `OG_COMPUTE_API_KEY` in `.env` and on Vercel.
-- [ ] Check the real model id with `GET {base}/models` and set `OG_COMPUTE_MODEL` if `qwen2.5-vl-72b-instruct` is not listed.
-- [ ] Run one live image. Unverified until then: the router accepting `image_url` data URLs, and the `verify_tee` field. If it rejects `verify_tee`, set `OG_COMPUTE_VERIFY_TEE=false`.
+- [x] Get a key at pc.0g.ai (Dashboard, API Keys). Set `OG_COMPUTE_API_KEY` in `.env`. Still to do: set it on Vercel.
+- [x] Model: default is `0gm-1.0-35b-a3b` (TEE-attested, reads images). `qwen2.5-vl-72b-instruct` also works.
+- [x] Live images on the mainnet router (7 Nov): data-URL images and `verify_tee` are accepted; face → stop, black → skip, screenshots → skip, each with a request id. The router has not reported `tee_verified` yet, so `teeVerified` is false. Not yet seen live: a `capture`, and the episode log upload.
 - [ ] Record the demo: replay images including a fully black one (covered lens) and a private one, then switch the key off or break the URL to show the safe-stop.
 - [ ] Submission: README and setup (done), demo video under 3 minutes, live demo link, contract addresses (README, *Deployed contracts*), team contacts.
 
