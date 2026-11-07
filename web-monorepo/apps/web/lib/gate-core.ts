@@ -80,14 +80,16 @@ export async function decide(input: GateInput, cfg: GateConfig): Promise<Decisio
   const body = await res.json().catch(() => null);
   // 402 insufficient_balance, 429, 502, 503 no_available_provider and any other non-2xx all land here.
   if (!res.ok) throw new GateUnavailable(`0G compute ${res.status}: ${body?.error?.code ?? body?.error?.message ?? "error"}`);
-  const requestId = body?.x_0g_trace?.request_id;
+  const trace = body?.x_0g_trace;
+  // Router replies carry x_0g_trace; a testnet provider proxy (app-sk key) puts its chat id in the ZG-Res-Key header instead.
+  const requestId = trace?.request_id ?? res.headers.get("ZG-Res-Key");
   const parsed = parseDecision(String(body?.choices?.[0]?.message?.content ?? ""), cfg.labels);
   if (!requestId || !parsed) throw new GateUnavailable("0G compute returned no usable decision");
   return {
     ...parsed,
     requestId,
-    provider: body.x_0g_trace.provider,
+    provider: trace?.provider,
     model: String(body.model ?? cfg.model),
-    ...(cfg.verifyTee && { teeVerified: body.x_0g_trace.tee_verified === true }),
+    ...(cfg.verifyTee && trace && { teeVerified: trace.tee_verified === true }),
   };
 }

@@ -22,6 +22,14 @@ test("returns the 0G request id and TEE flag with the decision", async () => {
   assert.equal(d.teeVerified, true);
 });
 
+test("testnet provider proxy: request id comes from the ZG-Res-Key header", async () => {
+  const f = (async () => new Response(JSON.stringify({ model: "m", choices: [{ message: { content: '{"action":"skip","reason":"dark"}' } }] }),
+    { status: 200, headers: { "ZG-Res-Key": "chat_9" } })) as typeof fetch;
+  const d = await decide(input, cfg(f));
+  assert.equal(d.requestId, "chat_9");
+  assert.equal(d.teeVerified, undefined);
+});
+
 test("safe-stop: every failure throws instead of inventing a decision", async () => {
   const down = (async () => { throw new Error("ECONNREFUSED"); }) as typeof fetch;
   for (const f of [down, reply(503, { error: { code: "no_available_provider" } }), reply(402, { error: { code: "insufficient_balance" } }),
