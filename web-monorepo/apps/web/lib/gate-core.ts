@@ -62,6 +62,8 @@ export async function decide(input: GateInput, cfg: GateConfig): Promise<Decisio
         model: cfg.model,
         temperature: 0,
         max_tokens: 120,
+        // Thinking models (0gm-1.0-35b-a3b) otherwise spend the 120 tokens reasoning and return no JSON.
+        chat_template_kwargs: { enable_thinking: false },
         ...(cfg.verifyTee && { verify_tee: true }),
         messages: [
           {
