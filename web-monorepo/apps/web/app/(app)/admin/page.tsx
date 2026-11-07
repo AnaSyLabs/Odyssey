@@ -142,7 +142,7 @@ function PublishRewards() {
   const post = async (body: object) => {
     setError(undefined);
     try {
-      return await call("/api/rewards/publish", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+      return await api("/api/rewards/publish", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
     } catch (e) {
       setError(errorText(e));
     }
