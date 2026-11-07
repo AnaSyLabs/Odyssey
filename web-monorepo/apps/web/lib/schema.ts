@@ -15,6 +15,7 @@ export const Samples = defineSchema("odsy.samples", {
   contentHash: str().indexed(), // sha256 of the raw (plaintext) payload
   storage: str().indexed(), // "inline" | "0g"
   ogRoot: str().optional(), // 0G Storage merkle root when storage = "0g"
+  scene: str().optional(), // scene tag from the 0G capture gate when OG_LABELS=true; attested by the gateway, not signed by the device
   mime: str(),
   size: u64(),
   sensors: bytes(), // JSON text as signed; encrypted when enc is set

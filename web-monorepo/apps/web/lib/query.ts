@@ -20,7 +20,7 @@ export async function findSamples(f: Filter) {
     const page = await client
       .select({
         $key: true, $createdAt: true, $expiresAt: true, device: true, worldId: true, deviceType: true, mac: true, kind: true,
-        capturedAt: true, lat: true, lon: true, geohash: true, contentHash: true, storage: true, ogRoot: true, mime: true,
+        capturedAt: true, lat: true, lon: true, geohash: true, contentHash: true, storage: true, ogRoot: true, scene: true, mime: true,
         size: true, enc: true,
       })
       .from(Samples, { onMismatch: "throw" })
@@ -35,7 +35,7 @@ export async function findSamples(f: Filter) {
         key: r.$key, distanceM: Math.round(distanceM(f.lat, f.lon, Number(r.lat.value), Number(r.lon.value)) * 10) / 10,
         device: r.device.value, worldId: r.worldId.value, deviceType: r.deviceType.value, mac: r.mac.value, kind: r.kind.value,
         capturedAt: Number(r.capturedAt.value), lat: r.lat.value, lon: r.lon.value, geohash: r.geohash.value,
-        contentHash: r.contentHash.value, storage: r.storage.value, ogRoot: r.ogRoot?.value, mime: r.mime.value,
+        contentHash: r.contentHash.value, storage: r.storage.value, ogRoot: r.ogRoot?.value, scene: r.scene?.value, mime: r.mime.value,
         size: Number(r.size.value), encrypted: !!r.enc?.value, createdAtBlock: r.$createdAt?.toString(), expiresAtBlock: r.$expiresAt.toString(),
         row: r,
       });

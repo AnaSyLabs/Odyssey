@@ -27,6 +27,8 @@ flowchart LR
 
 **Scope notes (honest).** Only `image` uploads are gated. Text, sensor, audio and video uploads pass through unchanged. The episode log holds hashes and the decision, never the image. A skipped or stopped image is judged once and not retried. The gate is on only when `OG_COMPUTE_API_KEY` is set.
 
+**Optional labelling (`OG_LABELS=true`, default off).** The same model call also returns a `scene` from a fixed list (street, indoor, nature, shop, vehicle, crowd, other). A valid tag is stored as the optional `scene` attribute on the Arkiv sample and shown in `/api/samples` and `/api/samples/<key>`; an invalid or missing tag is left out rather than guessed. The tag is the gateway's attestation, not part of the device signature, and it is not indexed or usable as a dataset filter yet. Older samples have none.
+
 ### Still ours to do (cannot be done from code alone)
 
 - [ ] Get a key at pc.0g.ai (Dashboard, API Keys) and deposit 0G. Set `OG_COMPUTE_API_KEY` in `.env` and on Vercel.

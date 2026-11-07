@@ -14,6 +14,7 @@ export function gate(input: GateInput): Promise<Decision> {
     apiKey: process.env.OG_COMPUTE_API_KEY ?? "",
     model: process.env.OG_COMPUTE_MODEL ?? "qwen2.5-vl-72b-instruct",
     verifyTee: process.env.OG_COMPUTE_VERIFY_TEE !== "false",
+    labels: process.env.OG_LABELS === "true",
     timeoutMs: Number(process.env.OG_COMPUTE_TIMEOUT_MS ?? 20_000),
     fetch,
   });

@@ -122,7 +122,7 @@ Arkiv track docs: [schema](arkiv/schema.md) · [friction](arkiv/friction.md) · 
 | `OdsySubscriptions` on Galileo: labs pay in 0G for 30-day dataset access, 70 % goes to contributors, Merkle reward claims | `contracts/src/OdsySubscriptions.sol`, `lib/contract.ts` | Deployed, 14 tests. Subscribe and claim not yet confirmed end to end |
 | `ConsensusRegistry` on Galileo: hex-tile verdicts by validator median, two-strike ban | `contracts/src/ConsensusRegistry.sol`, `lib/consensus.ts` | Deployed, 10 tests, hand-run live |
 | 0G Storage for payloads over 96 KiB, root kept on Arkiv | `lib/og.ts` | Built, not yet confirmed with a large payload |
-| Capture gate: a 0G Private Computer vision model returns capture / skip / stop for every image upload, each decision logged to 0G Storage with its request id; if 0G is unreachable the gateway stops and stores nothing | `lib/gate-core.ts`, `app/api/ingest`, `scripts/replay-gate.ts` | Built and unit-tested with a fake 0G; not yet run against the live router. Details: [docs/PRIZES.md](docs/PRIZES.md) |
+| Capture gate: a 0G Private Computer vision model returns capture / skip / stop for every image upload, each decision logged to 0G Storage with its request id; if 0G is unreachable the gateway stops and stores nothing | `lib/gate-core.ts`, `app/api/ingest`, `scripts/replay-gate.ts` | Built and unit-tested with a fake 0G; not yet run against the live router. Optional `OG_LABELS=true` also tags each image with a scene (street, indoor, nature, shop, vehicle, crowd, other), stored on the sample. Details: [docs/PRIZES.md](docs/PRIZES.md) |
 
 See it: TESTING.md parts 2 and 3. Both contracts are linked under *Deployed contracts* below.
 
@@ -168,7 +168,7 @@ flowchart LR
 |---|---|---|
 | Subscribe | Lab | Pays exactly the dataset price plus gas. Access lasts 30 days; renewals stack, up to 150 days prepaid |
 | Split | Contract | `contributorBps` (7000 = 70 %) to the contributor pool, the rest to the treasury. The owner can change it, never below 50 %, for future payments only |
-| Publish an epoch | Owner (`npm run rewards:publish`) | Splits the pool across payout wallets pro rata by each device's sample count, publishes one Merkle root. The contract refuses a total above the pool |
+| Publish an epoch | Owner (`npm run rewards:publish`, or an admin's **Publish rewards** button on `/admin`: preview, then confirm) | Splits the pool across payout wallets pro rata by each device's sample count, publishes one Merkle root. The contract refuses a total above the pool |
 | Claim | Payout wallet, or anyone on its behalf | `claim(epoch, account, amount, proof)` pays the account. The claimer pays gas, and a root can never pay out more than its published total |
 | Withdraw | Owner | `withdrawTreasury(to)` moves the treasury balance only, never contributor funds |
 
@@ -329,7 +329,7 @@ New samples that match a dataset are covered automatically.
 **70 %** of every payment is set aside for contributors and **30 %** goes to the treasury. The owner can change the split, but the contract never lets the contributor share fall below 50 %.
 
 1. **Payout wallet.** Every device is registered with a payout wallet: the wallet of the person who owns it (the World ID holder), never the key on the glasses. `POST /api/devices` requires `payout`, so the registration page sends the wallet the owner connected. It can be changed later with `PATCH /api/devices`.
-2. **Epochs.** An admin runs `npm run rewards:publish`. For every `Subscribed` event since the last epoch, it splits the dataset's contributor share across the dataset's samples, pro rata by device, to each device's payout wallet. It publishes one Merkle root with `publishRewards` and stores the leaves on Arkiv (`odsy.rewards`), plus a local copy in `apps/web/rewards/`.
+2. **Epochs.** An admin runs `npm run rewards:publish` or uses the Publish rewards section of `/admin` (it previews the split, then publishes the same one; the owner key `OG_PRIVATE_KEY` must be set on the server, and `SUBSCRIPTIONS_ADDRESS` and `SUBSCRIPTIONS_FROM_BLOCK` too). For every `Subscribed` event since the last epoch, it splits the dataset's contributor share across the dataset's samples, pro rata by device, to each device's payout wallet. It publishes one Merkle root with `publishRewards` and stores the leaves on Arkiv (`odsy.rewards`), plus a local copy in `apps/web/rewards/` when run from the command line.
 3. **Claiming.** Contributors see their share under **Transactions → Contributor rewards** and click **Claim**. Anyone may call `claim()` for an account; the money always goes to that account.
 4. **Safety limits.** The contract never pays more than an epoch's published total. The owner can only withdraw treasury revenue (`withdrawTreasury`), never contributor funds.
 
@@ -395,7 +395,7 @@ Runs are incremental. The cursor is `$expiresAt`: new and extended samples alway
 | `GET /api/enroll`, `POST /api/enroll` | Signed in | The enroll page's signed World ID request, then `{device, mac, result}`: verifies the proof (signal = device address), refuses a banned World ID, registers the device with the wallet as payout |
 | `POST /api/devices` | `Bearer REGISTRAR_TOKEN` | For an external registrar that verified World ID itself: binds `{device, worldId, deviceType, mac, payout}`; `payout` is the owner's wallet and is required. `403` for a banned World ID |
 | `PATCH /api/devices` | `Bearer REGISTRAR_TOKEN` | `{device, payout}`: set the wallet that receives a device's rewards |
-| `POST /api/ingest` | Device signature | `{kind, mime, capturedAt, lat, lon, sensors, data (base64), signature}` → `201 {entityKey, txHash, contentHash, storage, ogRoot, decision?, episodeRoot?}`. `403` for an unregistered or banned device. With `OG_COMPUTE_API_KEY` set, images are gated: `200 {stored:false, decision}` for skip or stop, `503` (safe-stop, nothing stored) if 0G cannot answer |
+| `POST /api/ingest` | Device signature | `{kind, mime, capturedAt, lat, lon, sensors, data (base64), signature}` → `201 {entityKey, txHash, contentHash, storage, ogRoot, decision?, episodeRoot?}`. `403` for an unregistered or banned device. With `OG_COMPUTE_API_KEY` set, images are gated (and with `OG_LABELS=true` each stored image also gets a `scene` tag, returned by `/api/samples`): `200 {stored:false, decision}` for skip or stop, `503` (safe-stop, nothing stored) if 0G cannot answer |
 | `GET /api/samples?lat=&lon=&radius=&kind=&deviceType=&from=&to=&limit=` or `?dataset=` | Public (metadata) | Samples within `radius` metres (max 50 km) or in a dataset, nearest first. `readable` says whether the viewer can decrypt |
 | `GET /api/samples/{key}` | Public, more with access | Metadata and the re-checked signature. With access, also the decrypted sensors and inline payload, and `verified.contentHash` |
 | `GET /api/samples/{key}/data` | Access | Decrypted payload as a file (inline or from 0G), hash-checked |

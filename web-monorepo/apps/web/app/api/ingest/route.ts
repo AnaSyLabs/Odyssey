@@ -97,6 +97,7 @@ export const POST = route(async function POST(req: Request) {
       contentHash,
       storage: inline ? "inline" : "0g",
       ...(ogRoot && { ogRoot }),
+      ...(decision?.scene && { scene: decision.scene }),
       mime: u.mime,
       size: u64(data.length),
       sensors: new Uint8Array(encrypt(Buffer.from(u.sensors), key, contentHash)),

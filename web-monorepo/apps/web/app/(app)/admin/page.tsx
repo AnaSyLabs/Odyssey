@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { formatEther } from "viem";
 import { LuShieldCheck } from "react-icons/lu";
 import { Loading, RowsSkeleton } from "@/components/Skeleton";
 import { useToastError } from "@/components/Toaster";
@@ -21,7 +22,12 @@ export default function AdminPage() {
       </main>
     );
   }
-  return <Admins key={session.address} me={session.address} />;
+  return (
+    <>
+      <Admins key={session.address} me={session.address} />
+      <PublishRewards />
+    </>
+  );
 }
 
 function Admins({ me }: { me: string }) {
@@ -119,5 +125,73 @@ function Admins({ me }: { me: string }) {
         )}
       </section>
     </main>
+  );
+}
+
+type Split = { epoch: string; fromBlock: string; throughBlock: string; earned: string; datasets: number; total: string; root: string; unpaid: string[]; leaves: { account: string; amount: string }[] };
+type Done = Split & { hash: string; entityKey?: string; storeError?: string; record?: unknown };
+
+/** Preview, then confirm: runs the same job as `npm run rewards:publish`. */
+function PublishRewards() {
+  const [split, setSplit] = useState<Split>();
+  const [done, setDone] = useState<Done>();
+  const [none, setNone] = useState<string>();
+  const [error, setError] = useState<string>();
+  const [busy, setBusy] = useState<"preview" | "publish">();
+
+  const post = async (body: object) => {
+    setError(undefined);
+    try {
+      return await call("/api/rewards/publish", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    } catch (e) {
+      setError(errorText(e));
+    }
+  };
+  const preview = async () => {
+    setBusy("preview");
+    setSplit(undefined); setDone(undefined); setNone(undefined);
+    const b = await post({});
+    if (b?.preview) setSplit(b.preview);
+    else if (b?.none) setNone(b.none);
+    setBusy(undefined);
+  };
+  const publish = async () => {
+    if (!split) return;
+    setBusy("publish");
+    const b = await post({ confirm: split.root });
+    if (b?.published) { setDone(b.published); setSplit(undefined); }
+    setBusy(undefined);
+  };
+
+  return (
+    <section className="glass mt-4 flex flex-col gap-3 p-4" aria-label="Publish rewards">
+      <div>
+        <p className="eyebrow">Contributor rewards</p>
+        <p className="muted text-sm">Turns subscription payments since the last epoch into claimable rewards. Preview the split first; publishing signs one transaction with the contract owner wallet and cannot be undone.</p>
+      </div>
+      {error && <p className="text-sm text-[var(--st-crimson)]" role="alert">{error}</p>}
+      {none && <p className="muted text-sm" role="status">{none}</p>}
+      <div><button className="btn" disabled={!!busy} onClick={preview}>{busy === "preview" ? "Working it out…" : "Preview next epoch"}</button></div>
+
+      {split && (
+        <div className="flex flex-col gap-2 text-xs">
+          <p>Epoch {split.epoch}, blocks {split.fromBlock} to {split.throughBlock}: {formatEther(BigInt(split.earned))} 0G contributor revenue across {split.datasets} dataset(s). Paying out {formatEther(BigInt(split.total))} 0G.</p>
+          <table className="w-full text-left">
+            <thead className="eyebrow"><tr><th className="py-1 font-semibold">Payout wallet</th><th className="py-1 font-semibold">0G</th></tr></thead>
+            <tbody>{split.leaves.map((l) => <tr key={l.account} className="border-t border-[var(--st-line)]"><td className="mono py-1" title={l.account}>{short(l.account, 8, 6)}</td><td className="mono py-1">{formatEther(BigInt(l.amount))}</td></tr>)}</tbody>
+          </table>
+          {!!split.unpaid.length && <p className="muted">{split.unpaid.length} device(s) have no payout wallet; their share stays in the unallocated pool.</p>}
+          <div><button className="btn primary" disabled={!!busy} onClick={publish}>{busy === "publish" ? "Publishing on 0G…" : `Publish epoch ${split.epoch}`}</button></div>
+        </div>
+      )}
+
+      {done && (
+        <div className="text-sm text-[var(--st-phosphor)]" role="status">
+          <p>Published epoch {done.epoch}: <a className="underline" href={`https://chainscan-galileo.0g.ai/tx/${done.hash}`} target="_blank" rel="noreferrer">{short(done.hash, 8, 6)}</a>. Contributors can claim now.</p>
+          {done.storeError && <p className="text-[var(--st-crimson)]" role="alert">The root is on-chain but saving the claim data to Arkiv failed ({done.storeError}). Claims will not work until it is stored. Save the text below as rewards/epoch-{done.epoch}.json and run <code>npm run rewards:publish -- --store rewards/epoch-{done.epoch}.json</code>.</p>}
+          {done.storeError && <textarea className="field mono mt-2 h-32 w-full text-xs" readOnly value={JSON.stringify(done.record)} aria-label="Epoch record to store" />}
+        </div>
+      )}
+    </section>
   );
 }
