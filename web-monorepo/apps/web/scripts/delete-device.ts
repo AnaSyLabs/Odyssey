@@ -25,8 +25,8 @@ const { entities } = await createPublicClient({ chain, transport: http() })
   .from(Devices).where(eq("device", addr(device))).ownedBy(wallet.account.address).fetch();
 
 if (!entities.length) {
-  console.error(`${device} is not registered. Nothing deleted.`);
-  process.exit(1);
+  console.log(`${device} is not registered, so there is nothing to delete.`);
+  process.exit(0); // already gone is not a failure: keeps npm from printing its error block
 }
 const wrong = entities.find((d) => d.mac.value.toUpperCase() !== mac.toUpperCase());
 if (wrong) {

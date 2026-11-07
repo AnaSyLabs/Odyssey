@@ -48,6 +48,23 @@ export async function findDevice(device: `0x${string}`) {
   return entities[0];
 }
 
+/** The device a World ID already enrolled, if any: one human, one device. worldId is the lowercase hex nullifier. */
+export async function findDeviceOf(worldId: string) {
+  const { entities } = await arkivPublic()
+    .select({ device: true, deviceType: true, mac: true })
+    .from(Devices)
+    .where(eq("worldId", worldId))
+    .ownedBy(gatewayAddress())
+    .limit(1)
+    .fetch();
+  return entities[0];
+}
+
+/** Tells a human which device holds their World ID and how to free it. */
+export const oneDevicePerHuman = (d: { device: { value: string }; deviceType: { value: string }; mac: { value: string } }) =>
+  `This World ID already enrolled a device: ${d.deviceType.value} ${d.device.value} (MAC ${d.mac.value}). Each human can enroll one device. ` +
+  `To use a new one, an admin removes the old one first: npm run device:delete -- ${d.device.value} ${d.mac.value}`;
+
 /**
  * Binds a device key to a World ID nullifier, one device per human. Callers must have verified the World ID proof.
  * Body: { device: 0x address, worldId: nullifier hash, deviceType, mac, payout: the owner's wallet, which receives the device's rewards }
@@ -63,9 +80,8 @@ export async function registerDevice(b: Record<string, string> | null) {
   const worldId = b.worldId.toLowerCase();
   if (await findDevice(device)) return fail(409, "device already registered");
   // One human, one device (README: Sybil resistance).
-  const { entities } = await arkivPublic()
-    .select({ $key: true }).from(Devices).where(eq("worldId", worldId)).ownedBy(gatewayAddress()).limit(1).fetch();
-  if (entities.length) return fail(409, "this World ID already has a device");
+  const owned = await findDeviceOf(worldId);
+  if (owned) return fail(409, oneDevicePerHuman(owned));
 
   // shortcut: check-then-create races under concurrent registrations; fine at registration volume.
   const { entityKey, txHash } = await arkivWallet().createEntity(
