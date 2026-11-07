@@ -58,7 +58,7 @@ cd ../web-monorepo && npm run dev       # http://localhost:3000
 4. **Create a dataset** (Bandra test, 19.0596 72.8295, radius 1000, price 0.01 0G, leave device model empty). Expect no 502. Copy its key into `LAB_DATASETS`.
 5. **Subscribe as the lab.** Switch MetaMask to the lab account, open the dataset, Subscribe, approve Galileo and confirm 0.01 0G. Expect "Paid until" 30 days out and unlocked payloads. Activity shows 0.007 0G to contributors.
 6. **Pull the data.** `npm run lab:ingest`. Expect JSONL and files in `apps/web/lab-data/`.
-7. **Rewards.** `npm run rewards:publish -- --dry-run` (expect the payout address with 0.007 0G), then without `--dry-run`. Sign in as the payout account, Activity, Claim. The balance rises by about 0.007 0G and a second claim reverts with `AlreadyClaimed`.
+7. **Rewards.** Either use the **Publish rewards** section on `/admin` (Preview next epoch, check the split, Publish epoch N) or run `npm run rewards:publish -- --dry-run` (expect the payout address with 0.007 0G), then without `--dry-run`. Sign in as the payout account, Activity, Claim. The balance rises by about 0.007 0G and a second claim reverts with `AlreadyClaimed`.
 8. **Large payload.** `npm run simulate -- 1 ./photo.jpg` with a file over 96 KiB, then `lab:ingest` again. Expect the file through 0G Storage.
 9. **Retention.** `curl -H "Authorization: Bearer $CRON_SECRET" localhost:3000/api/cron/extend`. Expect a JSON summary.
 

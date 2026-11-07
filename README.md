@@ -155,7 +155,7 @@ flowchart LR
 |---|---|---|
 | Subscribe | Lab | Pays exactly the dataset price plus gas. Access lasts 30 days; renewals stack, up to 150 days prepaid |
 | Split | Contract | `contributorBps` (7000 = 70 %) to the contributor pool, the rest to the treasury. The owner can change it, never below 50 %, for future payments only |
-| Publish an epoch | Owner (`npm run rewards:publish`) | Splits the pool across payout wallets pro rata by each device's sample count, publishes one Merkle root. The contract refuses a total above the pool |
+| Publish an epoch | Owner (`npm run rewards:publish`, or an admin's **Publish rewards** button on `/admin`: preview, then confirm) | Splits the pool across payout wallets pro rata by each device's sample count, publishes one Merkle root. The contract refuses a total above the pool |
 | Claim | Payout wallet, or anyone on its behalf | `claim(epoch, account, amount, proof)` pays the account. The claimer pays gas, and a root can never pay out more than its published total |
 | Withdraw | Owner | `withdrawTreasury(to)` moves the treasury balance only, never contributor funds |
 
@@ -316,7 +316,7 @@ New samples that match a dataset are covered automatically.
 **70 %** of every payment is set aside for contributors and **30 %** goes to the treasury. The owner can change the split, but the contract never lets the contributor share fall below 50 %.
 
 1. **Payout wallet.** Every device is registered with a payout wallet: the wallet of the person who owns it (the World ID holder), never the key on the glasses. `POST /api/devices` requires `payout`, so the registration page sends the wallet the owner connected. It can be changed later with `PATCH /api/devices`.
-2. **Epochs.** An admin runs `npm run rewards:publish`. For every `Subscribed` event since the last epoch, it splits the dataset's contributor share across the dataset's samples, pro rata by device, to each device's payout wallet. It publishes one Merkle root with `publishRewards` and stores the leaves on Arkiv (`odsy.rewards`), plus a local copy in `apps/web/rewards/`.
+2. **Epochs.** An admin runs `npm run rewards:publish` or uses the Publish rewards section of `/admin` (it previews the split, then publishes the same one; the owner key `OG_PRIVATE_KEY` must be set on the server, and `SUBSCRIPTIONS_ADDRESS` and `SUBSCRIPTIONS_FROM_BLOCK` too). For every `Subscribed` event since the last epoch, it splits the dataset's contributor share across the dataset's samples, pro rata by device, to each device's payout wallet. It publishes one Merkle root with `publishRewards` and stores the leaves on Arkiv (`odsy.rewards`), plus a local copy in `apps/web/rewards/` when run from the command line.
 3. **Claiming.** Contributors see their share under **Transactions → Contributor rewards** and click **Claim**. Anyone may call `claim()` for an account; the money always goes to that account.
 4. **Safety limits.** The contract never pays more than an epoch's published total. The owner can only withdraw treasury revenue (`withdrawTreasury`), never contributor funds.
 
