@@ -9,7 +9,7 @@ const CARDS = {
   },
   "06b": {
     title: "Claude answering over MCP",
-    what: ["Claude Desktop or Claude Code, connected with a lab wallet's MCP token.", "Type: “What was captured near Bandra today?”", "Let it call list_datasets, search_samples, get_sample and answer."],
+    what: ["Claude Desktop or Claude Code, connected with a lab wallet's MCP token.", "Type: “What did devices record near Bandra today? Temperature and humidity per device.”", "Let it call list_datasets and search_samples, then answer with devices and hashes."],
     how: "Screen-record at 1080p. About 13 seconds; trim the waiting.",
   },
 };
