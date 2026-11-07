@@ -1,7 +1,7 @@
 import { hashSignal } from "@worldcoin/idkit/hashing";
 import { signRequest } from "@worldcoin/idkit/signing";
 import { getAddress, isAddress } from "viem";
-import { findDevice, need, registerDevice } from "@/lib/arkiv";
+import { findDevice, findDeviceOf, need, oneDevicePerHuman, registerDevice } from "@/lib/arkiv";
 import { isBanned } from "@/lib/consensus";
 import { getSession, unauthorized } from "@/lib/session";
 import { fail, route } from "@/lib/api";
@@ -50,8 +50,13 @@ export const POST = route(async function POST(req: Request) {
   if (proof.signal_hash?.toLowerCase() !== hashSignal(device).toLowerCase()) return fail(400, "This proof was made for a different device address. Check the address and try again.");
   // Fail before World ID records the verification, so the human can retry with the right device.
   if (await findDevice(device)) return fail(409, "This device is already enrolled. Open Captures to see its uploads.");
+  // v3 nullifiers are hex, v4 are decimal; the registry stores hex.
+  const worldId = `0x${BigInt(proof.nullifier).toString(16)}`;
   // A banned human cannot enroll a new device. Checked before World ID records another verification.
-  if (await isBanned(`0x${BigInt(proof.nullifier).toString(16)}`)) return fail(403, "This World ID is banned for uploading fake or replayed data, so it can't enroll devices.");
+  if (await isBanned(worldId)) return fail(403, "This World ID is banned for uploading fake or replayed data, so it can't enroll devices.");
+  // Same for one human, one device: refuse here so the verification isn't spent. Registry rows are public, so naming the device leaks nothing.
+  const owned = await findDeviceOf(worldId);
+  if (owned) return fail(409, oneDevicePerHuman(owned));
 
   const res = await fetch(`https://developer.worldcoin.org/api/v4/verify/${need("WORLD_RP_ID")}`, {
     method: "POST",
@@ -63,7 +68,5 @@ export const POST = route(async function POST(req: Request) {
     return fail(409, "Your World ID has already enrolled a device. Each human can enroll one device.");
   if (!res.ok || !verdict.success) return fail(400, `World ID rejected the proof (${verdict.detail ?? verdict.code ?? res.status}). Start the verification again.`);
 
-  // v3 nullifiers are hex, v4 are decimal; the registry stores hex.
-  const worldId = `0x${BigInt(proof.nullifier).toString(16)}`;
   return registerDevice({ device, worldId, deviceType, mac: b.mac, payout: session.address });
 });
